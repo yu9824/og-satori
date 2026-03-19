@@ -82,10 +82,13 @@
 1. The OGP Image Service repository shall include a `README.md` at the root that describes the project purpose, usage, required environment variables, and deployment steps.
 2. The OGP Image Service repository shall include a `README.md` section with the complete list of supported query parameters and their defaults.
 3. The OGP Image Service repository shall include a `.gitignore` file that excludes `node_modules/`, build artifacts (`.next/`, `dist/`, `out/`), environment files (`.env`, `.env*.local`), Vercel local config (`.vercel/`), and editor-specific files.
-4. The OGP Image Service repository shall include a `LICENSE` file (MIT license) so that the terms of use are clear to external contributors.
+4. The OGP Image Service repository shall include a `LICENSE` file (MIT license) at the repository root so that the terms of use for the application code are clear to external contributors.
 5. The OGP Image Service repository shall not contain any files with secrets, API keys, or personal access tokens in committed history.
 6. When a `.env.example` or `.env.local.example` file is present, the OGP Image Service repository shall list all required environment variable names with placeholder values and brief descriptions, without real credentials.
 7. The OGP Image Service repository shall include a `.vercelignore` file to exclude development-only files and directories (e.g., test files, documentation source) from Vercel deployment bundles.
+8. The OGP Image Service repository shall include the SIL Open Font License 1.1 text as `public/fonts/OFL.txt` to satisfy the redistribution requirements of the bundled Noto Sans JP subset fonts.
+9. The OGP Image Service repository shall include a `NOTICE` file (or equivalent section in `README.md`) that attributes the Noto Sans JP font to Google LLC and the Noto Authors under SIL OFL 1.1, so that third-party license obligations are clearly communicated to users of the repository.
+10. The `scripts/subset-fonts.sh` script shall preserve the copyright metadata embedded in the font files (i.e., shall not strip the name table) when generating subset fonts, so that the original authorship information remains intact in the distributed files.
 
 ---
 
@@ -96,11 +99,13 @@
 #### 受け入れ基準
 
 1. The OGP Image Service shall read the blog name displayed in the template from an environment variable (e.g., `SITE_NAME`), falling back to `yu9824's Notes` when the variable is not set.
-2. The OGP Image Service shall read the font file URL(s) from environment variables (e.g., `FONT_URL`), falling back to a bundled or default URL when the variable is not set.
+2. The OGP Image Service shall read the font file URLs from environment variables `FONT_URL_REGULAR` and `FONT_URL_BOLD`, falling back to the pre-bundled subset fonts in `public/fonts/` when the variables are not set.
 3. The OGP Image Service shall read default image width, height, and text width from environment variables, falling back to the values defined in 要件 2 when not set.
 4. When an unsupported environment variable value is provided (e.g., non-numeric default width), the OGP Image Service shall log a warning and use the built-in default instead of throwing an error at startup.
 5. The OGP Image Service shall expose a local development server command (e.g., `vercel dev` or equivalent) so that developers can test image generation without deploying to Vercel.
 6. The OGP Image Service repository shall include a `README.md` section describing the steps to fork and adapt the service for a different blog, including required environment variable changes.
+7. The OGP Image Service repository shall include pre-generated subset font files (Noto Sans JP Regular and Bold, subsetted to hiragana, katakana, common kanji, and ASCII) placed in `public/fonts/` so that no external network access is required for font loading by default.
+8. The OGP Image Service repository shall include a shell script at `scripts/subset-fonts.sh` that downloads the full Noto Sans JP font files and generates the subset font files in `public/fonts/`, so that maintainers can regenerate the subset fonts when needed.
 
 ---
 
