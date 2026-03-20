@@ -26,6 +26,6 @@
     "@types/react-dom": "^18.3.0",
     "typescript": "^5.7.0",
     "vercel": "^50.34.2",
-    "vitest": "^2.0.0"
+    "vitest": "^4.1.0"
   }
 }
