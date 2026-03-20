@@ -19,17 +19,20 @@
 - [ ] 2.1 (P) 環境変数から設定値を読み込む機能を実装する
   - SITE_NAME、FONT_URL_REGULAR、FONT_URL_BOLD、FONT_FETCH_TIMEOUT_MS を読み込む
   - DEFAULT_WIDTH、DEFAULT_HEIGHT、DEFAULT_TEXT_WIDTH_RATIO を読み込む
-  - フォントの デフォルト URL は `/fonts/NotoSansJP-Regular.otf` と `/fonts/NotoSansJP-Bold.otf` を指すようにする
+  - NEXT_PUBLIC_BASE_URL → VERCEL_URL → 'http://localhost:3000' の順で baseUrl を解決する（VERCEL_URL には https:// を付与）
+  - フォントのデフォルト URL は `${baseUrl}/fonts/NotoSansJP-{Regular,Bold}.otf` として絶対 URL を構築する
   - 不正な数値型環境変数はコンソール警告を出してデフォルト値にフォールバックする
   - _Requirements: 6.1, 6.2, 6.3, 6.4_
 
 - [ ] 2.2 (P) URLクエリパラメータを解析・バリデーションする機能を実装する
+  - `ParamDefaults`（width, height, textWidthRatio）を受け取り `OgParams` または `ValidationError` を返す純粋関数として実装する（AppConfig には依存しない）
   - title、width、height、textWidth、format の各パラメータを解析する
   - title が省略または空文字の場合はデフォルトで空文字を返す
   - title が URL デコード後 200 文字を超える場合は TITLE_TOO_LONG エラーを返す
   - width、height、textWidth が正の整数でない場合は INVALID_DIMENSION エラーを返す
   - format が `svg` / `png` 以外の場合は INVALID_FORMAT エラーを返す
   - 仕様に定義されていないパラメータ（pattern, fontSize 等）は無視して処理を続行する
+  - RequestHandler 側で `AppConfig` から `ParamDefaults` を抽出して渡す
   - _Requirements: 1.3, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 2.10, 2.11, 2.12_
 
 - [ ] 3. フォントサブセット生成とライセンス対応

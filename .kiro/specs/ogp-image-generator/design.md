@@ -273,9 +273,9 @@ type ParseResult =
 /** 解析・検証済みのパラメータ */
 interface OgParams {
   title: string;       // デフォルト: ''
-  width: number;       // デフォルト: 1200
-  height: number;      // デフォルト: 630
-  textWidth: number;   // デフォルト: width * 0.8
+  width: number;       // デフォルト: defaults.width
+  height: number;      // デフォルト: defaults.height
+  textWidth: number;   // デフォルト: width * defaults.textWidthRatio
   format: 'png' | 'svg'; // デフォルト: 'png'
 }
 
@@ -286,10 +286,20 @@ interface ValidationError {
   field: string;
 }
 
+/**
+ * parseParams に渡すデフォルト値。AppConfig から抽出した数値のみで
+ * ドメイン層が AppConfig（インフラ層）に依存しないようにする
+ */
+interface ParamDefaults {
+  width: number;           // AppConfig.defaultWidth
+  height: number;          // AppConfig.defaultHeight
+  textWidthRatio: number;  // AppConfig.defaultTextWidthRatio
+}
+
 /** URLSearchParams を OgParams または ValidationError に変換する */
 function parseParams(
   searchParams: URLSearchParams,
-  config: AppConfig
+  defaults: ParamDefaults
 ): ParseResult;
 ```
 
@@ -301,6 +311,7 @@ function parseParams(
 - Validation: `width`・`height`・`textWidth` は `Number.isInteger(n) && n > 0` で検証
 - Validation: `title` は URL デコード後の文字数で 200 文字以内かを検証
 - Validation: `format` は `'png'` または `'svg'` のみ許可
+- 責務分離: `RequestHandler` が `loadConfig()` で得た `AppConfig` から `ParamDefaults` を抽出して渡す。これにより `ParamParser` は `AppConfig` の型構造を知らずに済む
 
 ---
 
@@ -340,7 +351,7 @@ function renderTemplate(input: RenderInput): React.ReactElement;
 **Implementation Notes**
 - Integration: `lib/template.tsx` に実装。satori の CSS 制約（Flexbox のみ、`calc()` 不可）に従う
 - テキスト折り返し: `style={{ width: textWidth, wordBreak: 'break-all' }}` で制御
-- 3 行省略: `style={{ display: '-webkit-box', WebkitLineClamp: 3, overflow: 'hidden' }}` で制御
+- 3 行省略: `style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}` で制御。**`-webkit-line-clamp` は satori で部分サポートのため、実装時に動作確認が必須**。動作しない場合のフォールバックとして「`title` を文字数でスライスして `'…'` を付与する手動省略」を実装することを推奨（200 文字上限があるため上限の文字列長でスライスすれば実用上問題ない）
 
 **テンプレートのファイル構造とカスタマイズ方針**
 
@@ -384,8 +395,9 @@ lib/template.tsx
 /** アプリケーション設定 */
 interface AppConfig {
   siteName: string;              // env: SITE_NAME, default: "yu9824's Notes"
-  fontUrlRegular: string;        // env: FONT_URL_REGULAR, default: '/fonts/NotoSansJP-Regular.otf'（同梱サブセット）
-  fontUrlBold: string;           // env: FONT_URL_BOLD,    default: '/fonts/NotoSansJP-Bold.otf'（同梱サブセット）
+  baseUrl: string;               // env: NEXT_PUBLIC_BASE_URL → VERCEL_URL → 'http://localhost:3000' の順でフォールバック。フォント URL の絶対 URL 化に使用
+  fontUrlRegular: string;        // env: FONT_URL_REGULAR, default: '{baseUrl}/fonts/NotoSansJP-Regular.otf'（同梱サブセット）
+  fontUrlBold: string;           // env: FONT_URL_BOLD,    default: '{baseUrl}/fonts/NotoSansJP-Bold.otf'（同梱サブセット）
   fontFetchTimeoutMs: number;    // env: FONT_FETCH_TIMEOUT_MS, default: 5000
   defaultWidth: number;          // env: DEFAULT_WIDTH, default: 1200
   defaultHeight: number;         // env: DEFAULT_HEIGHT, default: 630
@@ -400,7 +412,9 @@ function loadConfig(): AppConfig;
 
 **Implementation Notes**
 - Validation: 数値型 env は `Number.isFinite()` で検証。不正な場合は `console.warn` でログ出力し、デフォルト値を使用（4.6）
-- デフォルトフォント: Noto Sans JP（Google Fonts CDN）を推奨。日本語・英語の両文字を網羅し、OTF 形式で satori に対応している。Regular と Bold の 2 ウェイトを用意することで本文とタイトルの視覚的差別化を図る
+- `baseUrl` の解決順序: `NEXT_PUBLIC_BASE_URL`（Vercel が自動付与）→ `VERCEL_URL`（プレビュー環境）→ `'http://localhost:3000'`（ローカル開発）の順でフォールバック。`VERCEL_URL` は `https://` プレフィックスを持たないため `https://` を付与すること
+- `fontUrlRegular` / `fontUrlBold` の env 変数が指定された場合はそのまま使用し、未指定の場合は `baseUrl` を使って絶対 URL を構築する
+- デフォルトフォント: Noto Sans JP を同梱サブセットとして提供。Regular と Bold の 2 ウェイトを用意することで本文とタイトルの視覚的差別化を図る
 
 ---
 
@@ -438,6 +452,20 @@ function loadFonts(config: AppConfig): Promise<FontLoadResult>;
 
 **Implementation Notes**
 
+**フォントフォールバック時の動作仕様（重要）**
+
+Vercel Edge Runtime は V8 Isolate 上で動作するため **システムフォントが存在しない**。`fonts: []` を satori/ImageResponse に渡した場合の実際の動作は以下のとおり：
+
+| 文字種 | フォールバック時の表示 |
+|--------|----------------------|
+| ASCII (英数字・記号) | satori 内蔵フォントで描画される（文字化けなし）|
+| ひらがな・カタカナ・漢字 | **豆腐（□）になる**。satori に日本語フォールバックフォントはない |
+
+したがって「フォールバック継続」の意味は **「日本語が表示されなくても 200 画像を返してサービスを止めない」** であり、日本語タイトルが正しく表示されることは保証しない。要件 4.5 の「fall back to a system font」はこの制約を明示的に受け入れた上での仕様とする。
+
+- デフォルト構成（`/public/fonts/` 同梱サブセット）ではコールドスタート時も同一オリジンへの fetch のため、フォント取得失敗のリスクは極めて低い
+- CDN 差し替え時（`FONT_URL_REGULAR` / `FONT_URL_BOLD` 設定時）は CDN 障害でフォールバックに入る可能性があり、その際は日本語が□になることを運用者は承知しておく必要がある
+
 **高速化・安定化のための設計方針**
 
 | 工夫 | 実装方法 | 効果 |
@@ -445,7 +473,7 @@ function loadFonts(config: AppConfig): Promise<FontLoadResult>;
 | モジュールスコープキャッシュ | `let cache: Promise<FontLoadResult> \| null = null` をモジュール変数として保持し、初回フェッチ後は同じ Promise を返す | ウォームリクエストでの再フェッチを完全回避。コールドスタート時のみネットワーク通信が発生 |
 | Regular / Bold 並列フェッチ | `Promise.all([fetch(regularUrl), fetch(boldUrl)])` で同時取得 | 直列フェッチと比較してフォント読み込み時間を約 50% 削減 |
 | フェッチタイムアウト | `AbortSignal.timeout(config.fontFetchTimeoutMs)` を fetch オプションに渡す（デフォルト 5000ms） | CDN 障害時にリクエスト全体が詰まるのを防止。タイムアウト後はフォールバックに遷移 |
-| フォールバック継続 | フェッチ失敗・タイムアウト時は `ok: false` を返し、RequestHandler がシステムフォントで描画を続行 | フォント CDN 障害時もサービス停止を回避（4.5） |
+| フォールバック継続 | フェッチ失敗・タイムアウト時は `ok: false` を返し、RequestHandler が空 fonts 配列で描画を続行（日本語は□）| フォント CDN 障害時もサービス停止を回避（4.5）|
 
 **フォント配置戦略（デフォルト: 同梱サブセット）**
 
@@ -455,7 +483,7 @@ function loadFonts(config: AppConfig): Promise<FontLoadResult>;
 | 外部 CDN から fetch（env var 指定時） | なし | CDN に依存 | 設定で差し替え可能 |
 | JS バンドルに import | 超過（Hobby 上限 1 MB に対しフル字体は 8〜15 MB） | なし | ✗ 非採用 |
 
-- **デフォルト**: `public/fonts/NotoSansJP-Regular.otf` と `public/fonts/NotoSansJP-Bold.otf` を同梱。fetch URL は `\`${process.env.NEXT_PUBLIC_BASE_URL}/fonts/...\`` または Next.js の `publicRuntimeConfig` で構築する（同一オリジン fetch）。Vercel は `/public` を自動で CDN 配信するため実質ゼロレイテンシ
+- **デフォルト**: `public/fonts/NotoSansJP-Regular.otf` と `public/fonts/NotoSansJP-Bold.otf` を同梱。FontLoader は `config.fontUrlRegular`（または `config.fontUrlBold`）を使用して絶対 URL で fetch する。デフォルト URL は `ConfigLoader` が `config.baseUrl` を使って `${baseUrl}/fonts/NotoSansJP-Regular.otf` のように構築する。Vercel は `/public` を自動で CDN 配信するため実質ゼロレイテンシ
 - **サブセット対象文字**: ひらがな・カタカナ・常用漢字（2,136 字）・ASCII（95 字）。フル字体 8〜15 MB → サブセット後 500 KB〜1 MB 程度に削減
 - **再生成スクリプト**: `scripts/subset-fonts.sh` で fonttools（`pyftsubset`）を使用してサブセットを生成。CI で自動実行する必要はなく、メンテナーが手動で実行してコミットする運用とする（6.8）
 - **CDN への差し替え**: `FONT_URL_REGULAR` / `FONT_URL_BOLD` を設定すれば同梱フォントをバイパスして外部 URL を使用できる
@@ -509,7 +537,17 @@ function renderPNG(
 
 **Implementation Notes**
 - Integration: `renderSVG` は `satori()` を直接呼び出す。`renderPNG` は `next/og` の `ImageResponse` を使用
-- Risks: `ImageResponse` は `Response` を返すため、そのまま route handler から return できる。ヘッダーの上書き（Cache-Control）は `new Response(imageResponse.body, { headers: ... })` で対応
+- ヘッダー再構築: `ImageResponse` が返す `Response` のヘッダーを上書きする際は、`Content-Type` を含む必要なヘッダーをすべて明示的に設定する。`ImageResponse.body` は ReadableStream のため、以下のように新しい `Response` を構築する
+  ```typescript
+  const imageResponse = new ImageResponse(element, { width, height, fonts });
+  return new Response(imageResponse.body, {
+    headers: {
+      'Content-Type': 'image/png',
+      'Cache-Control': 'public, max-age=604800, stale-while-revalidate=86400',
+    },
+  });
+  ```
+- SVG レスポンスも同様に `Content-Type: image/svg+xml` と `Cache-Control` を明示設定する（RequestHandler 側で付与）
 
 ---
 
@@ -593,6 +631,26 @@ interface ErrorResponse {
 - **ParamParser**: `title` 200 文字制限、`width`/`height`/`textWidth` の正の整数バリデーション、`format` の不正値（`jpg` 等）、未知パラメータの無視、`title` 省略時のデフォルト空文字
 - **ConfigLoader**: 有効な環境変数の読み取り、不正な数値型 env のデフォルト値フォールバックと警告ログ出力
 - **TemplateRenderer**: 同一入力に対して同一の JSX 構造を返すこと（スナップショット的確認）
+
+**Vitest 設定上の注意 — JSX Transform**
+
+`lib/template.tsx` は JSX を含むため、`vitest.config.ts` に `@vitejs/plugin-react`（または `@vitejs/plugin-react-swc`）を組み込まないとコンパイルエラーになる。
+
+```typescript
+// vitest.config.ts
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    environment: 'node',
+  },
+});
+```
+
+- `TemplateRenderer` の単体テスト（task 8.3）は上記設定が必須。
+- `ParamParser` / `ConfigLoader` のテストは JSX 非依存だが、同一 config ファイルで統一管理する。
 
 ### Integration Tests（省略）
 
