@@ -1,0 +1,16 @@
+version: 2
+
+updates:
+  # npm 依存関係の週次自動更新
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Tokyo"
+    # 同時オープンするプルリクエストの最大数
+    open-pull-requests-limit: 10
+    # ラベルを付与する（任意）
+    labels:
+      - "dependencies"

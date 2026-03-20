@@ -1,0 +1,17 @@
+# Vercel デプロイ時に除外するファイル・ディレクトリ
+
+# テストファイル
+tests/
+*.test.ts
+*.test.tsx
+vitest.config.ts
+
+# スクリプト（サブセット生成等、開発時のみ必要）
+scripts/
+
+# ドキュメント・設定サンプル
+.env.example
+NOTICE
+
+# 開発ツール設定
+.kiro/

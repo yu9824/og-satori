@@ -1,0 +1,31 @@
+# 依存関係
+node_modules/
+
+# Next.js ビルド成果物
+.next/
+out/
+dist/
+
+# 環境変数（実値を含むファイルはコミットしない）
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Vercel ローカル設定
+.vercel/
+
+# エディタ固有ファイル
+.DS_Store
+.idea/
+*.swp
+*.swo
+.vscode/
+
+# TypeScript ビルドキャッシュ
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# テスト成果物
+coverage/
