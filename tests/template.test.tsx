@@ -23,10 +23,6 @@ const baseInput: RenderInput = {
   },
   config: {
     siteName: "yu9824's Notes",
-    baseUrl: "http://localhost:3000",
-    fontUrlRegular: "http://localhost:3000/fonts/NotoSansJP-Regular.otf",
-    fontUrlBold: "http://localhost:3000/fonts/NotoSansJP-Bold.otf",
-    fontFetchTimeoutMs: 5000,
     defaultWidth: 1200,
     defaultHeight: 630,
     defaultTextWidthRatio: 0.8,
@@ -148,6 +144,22 @@ describe("renderTemplate", () => {
       const element = renderTemplate({
         ...baseInput,
         config: { ...baseInput.config, siteName: "My Custom Blog" },
+      });
+      expect(element).toMatchSnapshot();
+    });
+
+    it("400x210 のサイズに対して一定の JSX 構造を返す", () => {
+      const element = renderTemplate({
+        ...baseInput,
+        params: { ...baseInput.params, width: 400, height: 210, textWidth: 320 },
+      });
+      expect(element).toMatchSnapshot();
+    });
+
+    it("630x630 のサイズに対して一定の JSX 構造を返す", () => {
+      const element = renderTemplate({
+        ...baseInput,
+        params: { ...baseInput.params, width: 630, height: 630, textWidth: 504 },
       });
       expect(element).toMatchSnapshot();
     });
