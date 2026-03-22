@@ -28,11 +28,10 @@ set -euo pipefail
 # 設定
 # ────────────────────────────────────────────────
 
-# Noto Sans JP の Google Fonts ダウンロード URL（OTF 形式）
-NOTO_VERSION="2.004"
-BASE_URL="https://github.com/notofonts/noto-cjk/releases/download/NotoSansJP-${NOTO_VERSION}"
-REGULAR_URL="${BASE_URL}/NotoSansJP-Regular.otf"
-BOLD_URL="${BASE_URL}/NotoSansJP-Bold.otf"
+# Noto Sans JP の GitHub Releases ダウンロード URL（ZIP アーカイブ）
+# タグ形式: Sans2.004（旧: NotoSansJP-2.004）、個別OTFではなくZIP配布に変更された
+NOTO_TAG="Sans2.004"
+ZIP_URL="https://github.com/notofonts/noto-cjk/releases/download/${NOTO_TAG}/16_NotoSansJP.zip"
 
 # 出力先ディレクトリ
 OUTPUT_DIR="$(dirname "$0")/../public/fonts"
@@ -52,6 +51,11 @@ trap cleanup EXIT
 if ! command -v pyftsubset &>/dev/null; then
   echo "エラー: fonttools がインストールされていません。"
   echo "  pip install fonttools brotli"
+  exit 1
+fi
+
+if ! command -v unzip &>/dev/null; then
+  echo "エラー: unzip がインストールされていません。"
   exit 1
 fi
 
@@ -108,19 +112,13 @@ SUBSET_OPTS=(
 # フォントのダウンロードとサブセット生成
 # ────────────────────────────────────────────────
 
-process_font() {
-  local url="$1"
-  local weight="$2"
-  local output_name="$3"
-
-  local temp_input="${TEMP_DIR}/${output_name}-original.otf"
+subset_font() {
+  local input="$1"
+  local output_name="$2"
   local output_path="${OUTPUT_DIR}/${output_name}.otf"
 
-  echo "→ ${weight} ウェイトをダウンロード中: ${url}"
-  curl -fsSL -o "$temp_input" "$url"
-
   echo "→ サブセットを生成中: ${output_name}.otf"
-  pyftsubset "$temp_input" \
+  pyftsubset "$input" \
     "--unicodes=${UNICODE_RANGE}" \
     "--output-file=${output_path}" \
     "--layout-features=*" \
@@ -132,8 +130,31 @@ process_font() {
 echo "=== Noto Sans JP サブセットフォント生成スクリプト ==="
 echo ""
 
-process_font "$REGULAR_URL" "Regular" "NotoSansJP-Regular"
-process_font "$BOLD_URL"    "Bold"    "NotoSansJP-Bold"
+# ZIP をダウンロードして解凍する
+ZIP_PATH="${TEMP_DIR}/NotoSansJP.zip"
+EXTRACT_DIR="${TEMP_DIR}/extracted"
+
+echo "→ ZIP アーカイブをダウンロード中: ${ZIP_URL}"
+curl -fsSL -o "$ZIP_PATH" "$ZIP_URL"
+
+echo "→ ZIP を解凍中..."
+unzip -q "$ZIP_PATH" -d "$EXTRACT_DIR"
+
+# OTF ファイルを検索して処理する
+REGULAR_OTF=$(find "$EXTRACT_DIR" -name "NotoSansJP-Regular.otf" | head -1)
+BOLD_OTF=$(find "$EXTRACT_DIR" -name "NotoSansJP-Bold.otf" | head -1)
+
+if [[ -z "$REGULAR_OTF" ]]; then
+  echo "エラー: NotoSansJP-Regular.otf が ZIP 内に見つかりません。"
+  exit 1
+fi
+if [[ -z "$BOLD_OTF" ]]; then
+  echo "エラー: NotoSansJP-Bold.otf が ZIP 内に見つかりません。"
+  exit 1
+fi
+
+subset_font "$REGULAR_OTF" "NotoSansJP-Regular"
+subset_font "$BOLD_OTF"    "NotoSansJP-Bold"
 
 echo ""
 echo "=== 完了 ==="
