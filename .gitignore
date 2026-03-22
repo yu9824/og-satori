@@ -34,3 +34,6 @@ coverage/
 
 # npm install 時に生成される WASM バイナリ（prepare スクリプトで public/ にコピーされる）
 public/resvg.wasm
+
+# フォントファイル（スクリプトでダウンロードされるバイナリ）
+public/fonts/*.otf
