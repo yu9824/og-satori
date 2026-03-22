@@ -8,6 +8,8 @@
 
 import satori from "satori";
 import { initWasm, Resvg } from "@resvg/resvg-wasm";
+import { readFile } from "fs/promises";
+import path from "path";
 import type React from "react";
 import type { FontData } from "./font";
 
@@ -21,17 +23,18 @@ export interface RenderOptions {
   fonts: FontData[];
 }
 
-// resvg WASM の初期化をキャッシュする（Edge Runtime のウォームリクエストで再初期化を避ける）
+// resvg WASM の初期化をキャッシュする（ウォームリクエストで再初期化を避ける）
 let resvgInitialized = false;
 
 /**
- * resvg WASM を初期化する（初回のみフェッチする）
+ * resvg WASM を初期化する（初回のみ読み込む）
  *
- * @param resvgWasmUrl - WASM バイナリを提供する URL（public/resvg.wasm）
+ * Node.js runtime で fs.readFile を使って public/resvg.wasm を読み込む。
  */
-async function ensureResvgInit(resvgWasmUrl: string): Promise<void> {
+async function ensureResvgInit(): Promise<void> {
   if (resvgInitialized) return;
-  await initWasm(fetch(resvgWasmUrl));
+  const wasm = await readFile(path.join(process.cwd(), "public", "resvg.wasm"));
+  await initWasm(wasm);
   resvgInitialized = true;
 }
 
@@ -65,19 +68,17 @@ export async function renderSVG(
  *
  * @param element - satori に渡す ReactElement
  * @param options - 画像サイズとフォントデータ
- * @param resvgWasmUrl - resvg WASM バイナリの URL（public/resvg.wasm）
  * @returns PNG 画像を含む Response（Cache-Control ヘッダーは呼び出し元で付与する）
  */
 export async function renderPNG(
   element: React.ReactElement,
-  options: RenderOptions,
-  resvgWasmUrl: string
+  options: RenderOptions
 ): Promise<Response> {
   // satori で SVG を生成する
   const svg = await renderSVG(element, options);
 
   // resvg WASM を初期化する（初回のみ）
-  await ensureResvgInit(resvgWasmUrl);
+  await ensureResvgInit();
 
   // SVG を PNG バイト列に変換する
   const resvg = new Resvg(svg, {

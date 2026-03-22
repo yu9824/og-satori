@@ -1,7 +1,7 @@
 /**
  * RequestHandler: OGP 画像を生成して返す GET ルートハンドラ
  *
- * Vercel Edge Runtime で動作する。
+ * Node.js Runtime で動作する。
  * URLクエリパラメータを解析し、フォントを読み込み、テンプレートを生成して画像を返す。
  *
  * エンドポイント: GET /api/og
@@ -10,9 +10,6 @@
  * - 不正なパラメータ: 400 JSON エラーを返す
  * - レンダリング失敗: 500 プレーンテキストエラーを返す
  */
-
-// Vercel Edge Runtime を明示的に指定する
-export const runtime = "edge";
 
 // Cache-Control ヘッダー: 7日間のパブリックキャッシュ + 1日間の stale-while-revalidate
 const CACHE_CONTROL = "public, max-age=604800, stale-while-revalidate=86400";
@@ -61,8 +58,7 @@ export async function GET(request: Request): Promise<Response> {
 
   try {
     // 3. フォントを読み込む（キャッシュがある場合はキャッシュから返す）
-    const fontResult = await loadFonts(config);
-    // フォント読み込み失敗時は空のフォントリストで続行する（要件 4.5）
+    const fontResult = await loadFonts();
     const fonts = fontResult.fonts;
 
     // 4. テンプレートを生成する（JSX → ReactElement）
@@ -87,9 +83,7 @@ export async function GET(request: Request): Promise<Response> {
       });
     } else {
       // PNG フォーマット（デフォルト）
-      // resvg WASM は public/ から静的配信する（Edge Function の JS バンドルサイズを削減するため）
-      const resvgWasmUrl = `${config.baseUrl}/resvg.wasm`;
-      const pngResponse = await renderPNG(element, renderOptions, resvgWasmUrl);
+      const pngResponse = await renderPNG(element, renderOptions);
 
       // Cache-Control ヘッダーを付与して返す
       const headers = new Headers(pngResponse.headers);
