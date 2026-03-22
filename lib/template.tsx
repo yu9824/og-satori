@@ -82,7 +82,7 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
         height: `${height}px`,
         backgroundColor: BACKGROUND_COLOR,
         padding: `${PADDING}px`,
-        fontFamily: '"Noto Sans JP", sans-serif',
+        fontFamily: '"OGSansJP", sans-serif',
         boxSizing: "border-box",
       }}
     >

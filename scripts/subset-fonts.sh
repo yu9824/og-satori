@@ -124,10 +124,46 @@ subset_font() {
     "--layout-features=*" \
     "--desubroutinize"
 
+  # OFL の Reserved Font Name "Noto" を削除するため、name テーブルを書き換える
+  echo "→ フォント名を書き換え中: ${output_name}.otf"
+  python3 - "$output_path" <<'PYEOF'
+import sys
+from fontTools.ttLib import TTFont
+
+path = sys.argv[1]
+font = TTFont(path)
+name_table = font["name"]
+
+replacements = [
+    ("Noto Sans JP", "OGSansJP"),
+    ("NotoSansJP",   "OGSansJP"),
+    ("Noto",         "OGSans"),
+]
+
+for record in name_table.names:
+    try:
+        value = record.toUnicode()
+        new_value = value
+        for old, new in replacements:
+            new_value = new_value.replace(old, new)
+        if new_value != value:
+            name_table.setName(
+                new_value,
+                record.nameID,
+                record.platformID,
+                record.platEncID,
+                record.langID,
+            )
+    except Exception:
+        pass
+
+font.save(path)
+PYEOF
+
   echo "✓ ${output_name}.otf を生成しました ($(du -sh "$output_path" | cut -f1))"
 }
 
-echo "=== Noto Sans JP サブセットフォント生成スクリプト ==="
+echo "=== OGSansJP サブセットフォント生成スクリプト (ベース: Noto Sans JP) ==="
 echo ""
 
 # ZIP をダウンロードして解凍する
@@ -153,8 +189,8 @@ if [[ -z "$BOLD_OTF" ]]; then
   exit 1
 fi
 
-subset_font "$REGULAR_OTF" "NotoSansJP-Regular"
-subset_font "$BOLD_OTF"    "NotoSansJP-Bold"
+subset_font "$REGULAR_OTF" "OGSansJP-Regular"
+subset_font "$BOLD_OTF"    "OGSansJP-Bold"
 
 echo ""
 echo "=== 完了 ==="

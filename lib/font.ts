@@ -39,19 +39,19 @@ export async function loadFonts(): Promise<FontLoadResult> {
   try {
     const fontsDir = path.join(process.cwd(), "public", "fonts");
     const [regularBuf, boldBuf] = await Promise.all([
-      readFile(path.join(fontsDir, "NotoSansJP-Regular.otf")),
-      readFile(path.join(fontsDir, "NotoSansJP-Bold.otf")),
+      readFile(path.join(fontsDir, "OGSansJP-Regular.otf")),
+      readFile(path.join(fontsDir, "OGSansJP-Bold.otf")),
     ]);
 
     const fonts: FontData[] = [
       {
-        name: "Noto Sans JP",
+        name: "OGSansJP",
         data: bufferToArrayBuffer(regularBuf),
         weight: 400,
         style: "normal",
       },
       {
-        name: "Noto Sans JP",
+        name: "OGSansJP",
         data: bufferToArrayBuffer(boldBuf),
         weight: 700,
         style: "normal",
