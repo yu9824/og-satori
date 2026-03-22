@@ -9,7 +9,7 @@
 
 import { describe, it, expect } from "vitest";
 import React from "react";
-import { renderTemplate, _calcScaleFactor } from "../lib/template";
+import { renderTemplate, _calcScaleFactor, _scaleTokens } from "../lib/template";
 import type { RenderInput } from "../lib/template";
 
 /** テスト用のデフォルト入力 */
@@ -44,6 +44,60 @@ describe("_calcScaleFactor", () => {
 
   it("1200x630 のとき 1.0 を返す", () => {
     expect(_calcScaleFactor(1200, 630)).toBe(1.0);
+  });
+});
+
+describe("_scaleTokens", () => {
+  it("scale=1.0 のとき各トークンが基準値を返す", () => {
+    const tokens = _scaleTokens(1.0, 1200, 630);
+    expect(tokens.padding).toBe(64);
+    expect(tokens.titleFontSize).toBe(56);
+    expect(tokens.labelFontSize).toBe(28);
+    expect(tokens.accentLineHeight).toBe(4);
+    expect(tokens.accentLineWidth).toBe(48);
+  });
+
+  it("scale=210/630 のとき titleFontSize が 16px 以上になる", () => {
+    const scale = 210 / 630;
+    const tokens = _scaleTokens(scale, 400, 210);
+    expect(tokens.titleFontSize).toBeGreaterThanOrEqual(16);
+  });
+
+  it("scale=210/630 のとき labelFontSize が 12px 以上になる", () => {
+    const scale = 210 / 630;
+    const tokens = _scaleTokens(scale, 400, 210);
+    expect(tokens.labelFontSize).toBeGreaterThanOrEqual(12);
+  });
+
+  it("scale=210/630 のとき accentLineHeight が 1 以上になる", () => {
+    const scale = 210 / 630;
+    const tokens = _scaleTokens(scale, 400, 210);
+    expect(tokens.accentLineHeight).toBeGreaterThanOrEqual(1);
+  });
+
+  it("scale=210/630 のとき accentLineWidth が 4 以上になる", () => {
+    const scale = 210 / 630;
+    const tokens = _scaleTokens(scale, 400, 210);
+    expect(tokens.accentLineWidth).toBeGreaterThanOrEqual(4);
+  });
+
+  it("400x210 のとき padding が 64px 未満かつ width*0.25 以下になる", () => {
+    const scale = 210 / 630;
+    const tokens = _scaleTokens(scale, 400, 210);
+    expect(tokens.padding).toBeLessThan(64);
+    expect(tokens.padding).toBeLessThanOrEqual(400 * 0.25);
+  });
+
+  it("padding*2 が width の 50% を超えない", () => {
+    const scale = 210 / 630;
+    const tokens = _scaleTokens(scale, 400, 210);
+    expect(tokens.padding * 2).toBeLessThanOrEqual(400 * 0.5);
+  });
+
+  it("padding*2 が height の 50% を超えない", () => {
+    const scale = 210 / 630;
+    const tokens = _scaleTokens(scale, 400, 210);
+    expect(tokens.padding * 2).toBeLessThanOrEqual(210 * 0.5);
   });
 });
 

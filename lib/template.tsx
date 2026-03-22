@@ -63,6 +63,46 @@ const ACCENT_LINE_WIDTH = 48;
 
 // ── END DESIGN TOKENS ──────────────────────────────────────────────────────
 
+// ── SCALED TOKENS ──────────────────────────────────────────────────────────
+
+/** スケーリング済みデザイントークンの型 */
+interface ScaledTokens {
+  padding: number;
+  titleFontSize: number;
+  labelFontSize: number;
+  accentLineHeight: number;
+  accentLineWidth: number;
+}
+
+/**
+ * スケール係数と画像サイズを受け取り、クランプ済みデザイントークンを返す純粋関数
+ *
+ * `_` プレフィックスはテスト専用公開関数であることを示す。
+ *
+ * @param scale - スケール係数（`_calcScaleFactor` の戻り値）
+ * @param width - 画像幅（px）
+ * @param height - 画像高さ（px）
+ * @returns クランプ済みの `ScaledTokens`
+ */
+export function _scaleTokens(
+  scale: number,
+  width: number,
+  height: number
+): ScaledTokens {
+  return {
+    padding: Math.max(
+      1,
+      Math.min(PADDING * scale, width * 0.25, height * 0.25)
+    ),
+    titleFontSize: Math.max(16, TITLE_FONT_SIZE * scale),
+    labelFontSize: Math.max(12, LABEL_FONT_SIZE * scale),
+    accentLineHeight: Math.max(1, ACCENT_LINE_HEIGHT * scale),
+    accentLineWidth: Math.max(4, ACCENT_LINE_WIDTH * scale),
+  };
+}
+
+// ── END SCALED TOKENS ──────────────────────────────────────────────────────
+
 /** テンプレートへの入力 */
 export interface RenderInput {
   /** URLクエリパラメータから解析された OgParams */
