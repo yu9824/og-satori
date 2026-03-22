@@ -15,6 +15,24 @@ import React from "react";
 import type { AppConfig } from "./config";
 import type { OgParams } from "./params";
 
+// ── SCALE CONSTANTS ────────────────────────────────────────────────────────
+
+/** スケール係数の基準となる短辺（px）。min(1200, 630) = 630 */
+const BASE_SHORT_SIDE = 630;
+
+/**
+ * 画像の短辺を基準とするスケール係数を算出する純粋関数
+ *
+ * `_` プレフィックスはテスト専用公開関数であることを示す。
+ *
+ * @param width - 画像幅（px）
+ * @param height - 画像高さ（px）
+ * @returns `min(width, height) / BASE_SHORT_SIDE`
+ */
+export function _calcScaleFactor(width: number, height: number): number {
+  return Math.min(width, height) / BASE_SHORT_SIDE;
+}
+
 // ── DESIGN TOKENS ──────────────────────────────────────────────────────────
 // ★ カスタマイズはここだけ変更すればOK
 // ★ フォークして別のブログに適用する場合は、このブロックの値を変更してください
@@ -45,6 +63,46 @@ const ACCENT_LINE_WIDTH = 48;
 
 // ── END DESIGN TOKENS ──────────────────────────────────────────────────────
 
+// ── SCALED TOKENS ──────────────────────────────────────────────────────────
+
+/** スケーリング済みデザイントークンの型 */
+interface ScaledTokens {
+  padding: number;
+  titleFontSize: number;
+  labelFontSize: number;
+  accentLineHeight: number;
+  accentLineWidth: number;
+}
+
+/**
+ * スケール係数と画像サイズを受け取り、クランプ済みデザイントークンを返す純粋関数
+ *
+ * `_` プレフィックスはテスト専用公開関数であることを示す。
+ *
+ * @param scale - スケール係数（`_calcScaleFactor` の戻り値）
+ * @param width - 画像幅（px）
+ * @param height - 画像高さ（px）
+ * @returns クランプ済みの `ScaledTokens`
+ */
+export function _scaleTokens(
+  scale: number,
+  width: number,
+  height: number
+): ScaledTokens {
+  return {
+    padding: Math.max(
+      1,
+      Math.min(PADDING * scale, width * 0.25, height * 0.25)
+    ),
+    titleFontSize: Math.max(16, TITLE_FONT_SIZE * scale),
+    labelFontSize: Math.max(12, LABEL_FONT_SIZE * scale),
+    accentLineHeight: Math.max(1, ACCENT_LINE_HEIGHT * scale),
+    accentLineWidth: Math.max(4, ACCENT_LINE_WIDTH * scale),
+  };
+}
+
+// ── END SCALED TOKENS ──────────────────────────────────────────────────────
+
 /** テンプレートへの入力 */
 export interface RenderInput {
   /** URLクエリパラメータから解析された OgParams */
@@ -67,9 +125,13 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
   const { title, width, height, textWidth } = params;
   const { siteName } = config;
 
+  // スケール係数とクランプ済みトークンを算出する
+  const scale = _calcScaleFactor(width, height);
+  const tokens = _scaleTokens(scale, width, height);
+
   // タイトルが長すぎる場合の手動省略処理
   // satori の -webkit-line-clamp は部分サポートのため、フォールバックとして実装する
-  const truncatedTitle = truncateTitle(title, textWidth);
+  const truncatedTitle = truncateTitle(title, textWidth, tokens.titleFontSize);
 
   return (
     <div
@@ -81,7 +143,7 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
         width: `${width}px`,
         height: `${height}px`,
         backgroundColor: BACKGROUND_COLOR,
-        padding: `${PADDING}px`,
+        padding: `${tokens.padding}px`,
         fontFamily: '"OGSansJP", sans-serif',
         boxSizing: "border-box",
       }}
@@ -105,7 +167,7 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
         >
           <span
             style={{
-              fontSize: `${TITLE_FONT_SIZE}px`,
+              fontSize: `${tokens.titleFontSize}px`,
               fontWeight: 700,
               color: TEXT_COLOR,
               lineHeight: 1.4,
@@ -127,23 +189,23 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: `${ACCENT_LINE_HEIGHT * 3}px`,
+          gap: `${tokens.accentLineHeight * 3}px`,
         }}
       >
         {/* アクセントライン */}
         <div
           style={{
             display: "flex",
-            width: `${ACCENT_LINE_WIDTH}px`,
-            height: `${ACCENT_LINE_HEIGHT}px`,
+            width: `${tokens.accentLineWidth}px`,
+            height: `${tokens.accentLineHeight}px`,
             backgroundColor: ACCENT_COLOR,
-            borderRadius: `${ACCENT_LINE_HEIGHT / 2}px`,
+            borderRadius: `${tokens.accentLineHeight / 2}px`,
           }}
         />
         {/* ブログ名 */}
         <span
           style={{
-            fontSize: `${LABEL_FONT_SIZE}px`,
+            fontSize: `${tokens.labelFontSize}px`,
             fontWeight: 400,
             color: ACCENT_COLOR,
           }}
@@ -166,13 +228,14 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
  * @param textWidth - テキスト描画エリアの幅（px）
  * @returns 省略済みのタイトル文字列
  */
-function truncateTitle(title: string, textWidth: number): string {
+function truncateTitle(title: string, textWidth: number, fontSize: number): string {
   if (!title) return title;
+  if (textWidth <= 0) return "";
 
   // 1 行あたりの概算文字数（フォントサイズとテキスト幅から計算）
-  // TITLE_FONT_SIZE * 0.6 は半角文字の概算幅（全角文字はその 2 倍）
+  // fontSize * 0.6 は半角文字の概算幅（全角文字はその 2 倍）
   // ここでは全角文字基準で計算する（日本語タイトルを想定）
-  const charsPerLine = Math.floor(textWidth / TITLE_FONT_SIZE);
+  const charsPerLine = Math.floor(textWidth / fontSize);
   const maxChars = charsPerLine * 3; // 3 行分
 
   if (title.length <= maxChars) {

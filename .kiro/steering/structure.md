@@ -18,7 +18,7 @@
 
 ### Static Assets (`public/`)
 **Purpose**: Edge Function 外で静的配信するファイル
-**Example**: `public/fonts/NotoSansJP-{Regular,Bold}.otf`、`public/resvg.wasm`
+**Example**: `public/fonts/OGSansJP-{Regular,Bold}.otf`、`public/resvg.wasm`
 
 ### Tests (`tests/`)
 **Purpose**: `lib/` 各モジュールの Vitest ユニットテスト
@@ -56,4 +56,4 @@ import type { AppConfig } from "./config";
 - テスト用の内部公開関数は `_` プレフィックスで表現（例：`_resetFontCache`）
 
 ---
-_Updated: 2026-03-22 (sync: Node.js Runtime 移行反映)_
+_Updated: 2026-03-22 (sync: OGSansJP フォントリネーム反映)_

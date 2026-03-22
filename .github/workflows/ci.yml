@@ -17,11 +17,11 @@ jobs:
 
     steps:
       - name: リポジトリをチェックアウト
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # Node.js 24.x を使用する（本番ランタイムと一致させる）
       - name: Node.js 24.x をセットアップ
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "24"
           cache: "npm"
@@ -36,6 +36,10 @@ jobs:
       # TypeScript の型チェックを実行する
       - name: TypeScript 型チェックを実行
         run: npm run type-check
+
+      # Next.js ビルドが成功することを確認する
+      - name: Next.js ビルドを実行
+        run: npm run build
 
       # 高・重大な脆弱性がある場合は CI を失敗させる
       # devDependencies (vercel CLI 等) は除外して本番依存関係のみを検査する
