@@ -9,7 +9,7 @@
 
 import { describe, it, expect } from "vitest";
 import React from "react";
-import { renderTemplate } from "../lib/template";
+import { renderTemplate, _calcScaleFactor } from "../lib/template";
 import type { RenderInput } from "../lib/template";
 
 /** テスト用のデフォルト入力 */
@@ -32,6 +32,20 @@ const baseInput: RenderInput = {
     defaultTextWidthRatio: 0.8,
   },
 };
+
+describe("_calcScaleFactor", () => {
+  it("400x210 のとき 210/630 ≈ 0.333 を返す", () => {
+    expect(_calcScaleFactor(400, 210)).toBeCloseTo(210 / 630);
+  });
+
+  it("630x630 のとき 1.0 を返す", () => {
+    expect(_calcScaleFactor(630, 630)).toBe(1.0);
+  });
+
+  it("1200x630 のとき 1.0 を返す", () => {
+    expect(_calcScaleFactor(1200, 630)).toBe(1.0);
+  });
+});
 
 describe("renderTemplate", () => {
   // ────────────────────────────────────────────────

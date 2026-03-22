@@ -15,6 +15,24 @@ import React from "react";
 import type { AppConfig } from "./config";
 import type { OgParams } from "./params";
 
+// ── SCALE CONSTANTS ────────────────────────────────────────────────────────
+
+/** スケール係数の基準となる短辺（px）。min(1200, 630) = 630 */
+const BASE_SHORT_SIDE = 630;
+
+/**
+ * 画像の短辺を基準とするスケール係数を算出する純粋関数
+ *
+ * `_` プレフィックスはテスト専用公開関数であることを示す。
+ *
+ * @param width - 画像幅（px）
+ * @param height - 画像高さ（px）
+ * @returns `min(width, height) / BASE_SHORT_SIDE`
+ */
+export function _calcScaleFactor(width: number, height: number): number {
+  return Math.min(width, height) / BASE_SHORT_SIDE;
+}
+
 // ── DESIGN TOKENS ──────────────────────────────────────────────────────────
 // ★ カスタマイズはここだけ変更すればOK
 // ★ フォークして別のブログに適用する場合は、このブロックの値を変更してください
