@@ -194,5 +194,25 @@ describe("renderTemplate", () => {
       const json = JSON.stringify(element);
       expect(json).toContain("テストタイトル");
     });
+
+    it("textWidth が 0 のとき truncatedTitle が空文字になる", () => {
+      const element = renderTemplate({
+        ...baseInput,
+        params: { ...baseInput.params, textWidth: 0, title: "何かのタイトル" },
+      });
+      const json = JSON.stringify(element);
+      // 空文字のとき、タイトル文字列の先頭文字も含まれないことを確認
+      expect(json).not.toContain("何か");
+    });
+
+    it("textWidth が負のとき truncatedTitle が空文字になる", () => {
+      const element = renderTemplate({
+        ...baseInput,
+        params: { ...baseInput.params, textWidth: -100, title: "何かのタイトル" },
+      });
+      const json = JSON.stringify(element);
+      // 空文字のとき、タイトル文字列の先頭文字も含まれないことを確認
+      expect(json).not.toContain("何か");
+    });
   });
 });

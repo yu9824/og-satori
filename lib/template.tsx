@@ -127,7 +127,7 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
 
   // タイトルが長すぎる場合の手動省略処理
   // satori の -webkit-line-clamp は部分サポートのため、フォールバックとして実装する
-  const truncatedTitle = truncateTitle(title, textWidth);
+  const truncatedTitle = truncateTitle(title, textWidth, TITLE_FONT_SIZE);
 
   return (
     <div
@@ -224,13 +224,14 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
  * @param textWidth - テキスト描画エリアの幅（px）
  * @returns 省略済みのタイトル文字列
  */
-function truncateTitle(title: string, textWidth: number): string {
+function truncateTitle(title: string, textWidth: number, fontSize: number): string {
   if (!title) return title;
+  if (textWidth <= 0) return "";
 
   // 1 行あたりの概算文字数（フォントサイズとテキスト幅から計算）
-  // TITLE_FONT_SIZE * 0.6 は半角文字の概算幅（全角文字はその 2 倍）
+  // fontSize * 0.6 は半角文字の概算幅（全角文字はその 2 倍）
   // ここでは全角文字基準で計算する（日本語タイトルを想定）
-  const charsPerLine = Math.floor(textWidth / TITLE_FONT_SIZE);
+  const charsPerLine = Math.floor(textWidth / fontSize);
   const maxChars = charsPerLine * 3; // 3 行分
 
   if (title.length <= maxChars) {
