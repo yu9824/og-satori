@@ -8,7 +8,7 @@ exports[`renderTemplate > スナップショット > カスタム siteName に�
       "boxSizing": "border-box",
       "display": "flex",
       "flexDirection": "column",
-      "fontFamily": ""Noto Sans JP", sans-serif",
+      "fontFamily": ""OGSansJP", sans-serif",
       "height": "630px",
       "justifyContent": "space-between",
       "padding": "64px",
@@ -97,7 +97,7 @@ exports[`renderTemplate > スナップショット > デフォルト入力に対
       "boxSizing": "border-box",
       "display": "flex",
       "flexDirection": "column",
-      "fontFamily": ""Noto Sans JP", sans-serif",
+      "fontFamily": ""OGSansJP", sans-serif",
       "height": "630px",
       "justifyContent": "space-between",
       "padding": "64px",
@@ -186,10 +186,10 @@ exports[`renderTemplate > スナップショット > 異なるサイズに対し
       "boxSizing": "border-box",
       "display": "flex",
       "flexDirection": "column",
-      "fontFamily": ""Noto Sans JP", sans-serif",
+      "fontFamily": ""OGSansJP", sans-serif",
       "height": "420px",
       "justifyContent": "space-between",
-      "padding": "64px",
+      "padding": "42.666666666666664px",
       "width": "800px",
     }
   }
@@ -220,7 +220,7 @@ exports[`renderTemplate > スナップショット > 異なるサイズに対し
             "WebkitLineClamp": 3,
             "color": "#f1f5f9",
             "display": "-webkit-box",
-            "fontSize": "56px",
+            "fontSize": "37.33333333333333px",
             "fontWeight": 700,
             "lineHeight": 1.4,
             "overflow": "hidden",
@@ -237,7 +237,7 @@ exports[`renderTemplate > スナップショット > 異なるサイズに対し
       {
         "display": "flex",
         "flexDirection": "column",
-        "gap": "12px",
+        "gap": "8px",
       }
     }
   >
@@ -245,10 +245,10 @@ exports[`renderTemplate > スナップショット > 異なるサイズに対し
       style={
         {
           "backgroundColor": "#38bdf8",
-          "borderRadius": "2px",
+          "borderRadius": "1.3333333333333333px",
           "display": "flex",
-          "height": "4px",
-          "width": "48px",
+          "height": "2.6666666666666665px",
+          "width": "32px",
         }
       }
     />
@@ -256,7 +256,7 @@ exports[`renderTemplate > スナップショット > 異なるサイズに対し
       style={
         {
           "color": "#38bdf8",
-          "fontSize": "28px",
+          "fontSize": "18.666666666666664px",
           "fontWeight": 400,
         }
       }
@@ -275,7 +275,7 @@ exports[`renderTemplate > スナップショット > 空タイトルに対して
       "boxSizing": "border-box",
       "display": "flex",
       "flexDirection": "column",
-      "fontFamily": ""Noto Sans JP", sans-serif",
+      "fontFamily": ""OGSansJP", sans-serif",
       "height": "630px",
       "justifyContent": "space-between",
       "padding": "64px",
@@ -362,7 +362,7 @@ exports[`renderTemplate > スナップショット > 長いタイトルに対し
       "boxSizing": "border-box",
       "display": "flex",
       "flexDirection": "column",
-      "fontFamily": ""Noto Sans JP", sans-serif",
+      "fontFamily": ""OGSansJP", sans-serif",
       "height": "630px",
       "justifyContent": "space-between",
       "padding": "64px",

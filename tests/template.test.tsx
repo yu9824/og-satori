@@ -171,6 +171,34 @@ describe("renderTemplate", () => {
   // ────────────────────────────────────────────────
   // ReactElement の基本的な構造テスト
   // ────────────────────────────────────────────────
+  describe("スケーリング統合", () => {
+    it("800x420 では titleFontSize が 56px 未満になる（スケール適用を確認）", () => {
+      const element = renderTemplate({
+        ...baseInput,
+        params: { ...baseInput.params, width: 800, height: 420, textWidth: 640 },
+      });
+      const json = JSON.stringify(element);
+      // 基準 56px がそのまま使われていないことを確認
+      expect(json).not.toContain('"56px"');
+    });
+
+    it("400x210 では padding が 64px 未満になる（スケール適用を確認）", () => {
+      const element = renderTemplate({
+        ...baseInput,
+        params: { ...baseInput.params, width: 400, height: 210, textWidth: 320 },
+      });
+      const json = JSON.stringify(element);
+      expect(json).not.toContain('"64px"');
+    });
+
+    it("1200x630（デフォルト）では scale=1.0 のため基準値がそのまま使われる", () => {
+      const element = renderTemplate(baseInput);
+      const json = JSON.stringify(element);
+      expect(json).toContain('"56px"');
+      expect(json).toContain('"64px"');
+    });
+  });
+
   describe("出力の構造検証", () => {
     it("ReactElement を返す", () => {
       const element = renderTemplate(baseInput);

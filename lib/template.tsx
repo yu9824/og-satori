@@ -125,9 +125,13 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
   const { title, width, height, textWidth } = params;
   const { siteName } = config;
 
+  // スケール係数とクランプ済みトークンを算出する
+  const scale = _calcScaleFactor(width, height);
+  const tokens = _scaleTokens(scale, width, height);
+
   // タイトルが長すぎる場合の手動省略処理
   // satori の -webkit-line-clamp は部分サポートのため、フォールバックとして実装する
-  const truncatedTitle = truncateTitle(title, textWidth, TITLE_FONT_SIZE);
+  const truncatedTitle = truncateTitle(title, textWidth, tokens.titleFontSize);
 
   return (
     <div
@@ -139,7 +143,7 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
         width: `${width}px`,
         height: `${height}px`,
         backgroundColor: BACKGROUND_COLOR,
-        padding: `${PADDING}px`,
+        padding: `${tokens.padding}px`,
         fontFamily: '"OGSansJP", sans-serif',
         boxSizing: "border-box",
       }}
@@ -163,7 +167,7 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
         >
           <span
             style={{
-              fontSize: `${TITLE_FONT_SIZE}px`,
+              fontSize: `${tokens.titleFontSize}px`,
               fontWeight: 700,
               color: TEXT_COLOR,
               lineHeight: 1.4,
@@ -185,23 +189,23 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: `${ACCENT_LINE_HEIGHT * 3}px`,
+          gap: `${tokens.accentLineHeight * 3}px`,
         }}
       >
         {/* アクセントライン */}
         <div
           style={{
             display: "flex",
-            width: `${ACCENT_LINE_WIDTH}px`,
-            height: `${ACCENT_LINE_HEIGHT}px`,
+            width: `${tokens.accentLineWidth}px`,
+            height: `${tokens.accentLineHeight}px`,
             backgroundColor: ACCENT_COLOR,
-            borderRadius: `${ACCENT_LINE_HEIGHT / 2}px`,
+            borderRadius: `${tokens.accentLineHeight / 2}px`,
           }}
         />
         {/* ブログ名 */}
         <span
           style={{
-            fontSize: `${LABEL_FONT_SIZE}px`,
+            fontSize: `${tokens.labelFontSize}px`,
             fontWeight: 400,
             color: ACCENT_COLOR,
           }}
