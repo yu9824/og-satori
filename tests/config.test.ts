@@ -19,11 +19,6 @@ describe("loadConfig", () => {
     process.env = { ...originalEnv };
     // OGP 関連の環境変数を全て削除する
     delete process.env.SITE_NAME;
-    delete process.env.NEXT_PUBLIC_BASE_URL;
-    delete process.env.VERCEL_URL;
-    delete process.env.FONT_URL_REGULAR;
-    delete process.env.FONT_URL_BOLD;
-    delete process.env.FONT_FETCH_TIMEOUT_MS;
     delete process.env.DEFAULT_WIDTH;
     delete process.env.DEFAULT_HEIGHT;
     delete process.env.DEFAULT_TEXT_WIDTH_RATIO;
@@ -40,25 +35,9 @@ describe("loadConfig", () => {
     it("環境変数が未設定の場合はデフォルト値を返す", () => {
       const config = loadConfig();
       expect(config.siteName).toBe("yu9824's Notes");
-      expect(config.fontFetchTimeoutMs).toBe(5000);
       expect(config.defaultWidth).toBe(1200);
       expect(config.defaultHeight).toBe(630);
       expect(config.defaultTextWidthRatio).toBe(0.8);
-    });
-
-    it("baseUrl は NEXT_PUBLIC_BASE_URL も VERCEL_URL も未設定の場合 'http://localhost:3000' を返す", () => {
-      const config = loadConfig();
-      expect(config.baseUrl).toBe("http://localhost:3000");
-    });
-
-    it("フォント URL のデフォルトは baseUrl を使って構築される", () => {
-      const config = loadConfig();
-      expect(config.fontUrlRegular).toBe(
-        "http://localhost:3000/fonts/NotoSansJP-Regular.otf"
-      );
-      expect(config.fontUrlBold).toBe(
-        "http://localhost:3000/fonts/NotoSansJP-Bold.otf"
-      );
     });
   });
 
@@ -70,45 +49,6 @@ describe("loadConfig", () => {
       process.env.SITE_NAME = "My Blog";
       const config = loadConfig();
       expect(config.siteName).toBe("My Blog");
-    });
-
-    it("NEXT_PUBLIC_BASE_URL が設定されている場合はその値を baseUrl として返す", () => {
-      process.env.NEXT_PUBLIC_BASE_URL = "https://example.com";
-      const config = loadConfig();
-      expect(config.baseUrl).toBe("https://example.com");
-    });
-
-    it("VERCEL_URL が設定されている場合は https:// を付与して baseUrl として返す", () => {
-      process.env.VERCEL_URL = "my-app.vercel.app";
-      const config = loadConfig();
-      expect(config.baseUrl).toBe("https://my-app.vercel.app");
-    });
-
-    it("NEXT_PUBLIC_BASE_URL が VERCEL_URL より優先される", () => {
-      process.env.NEXT_PUBLIC_BASE_URL = "https://example.com";
-      process.env.VERCEL_URL = "my-app.vercel.app";
-      const config = loadConfig();
-      expect(config.baseUrl).toBe("https://example.com");
-    });
-
-    it("FONT_URL_REGULAR が設定されている場合はその値を返す", () => {
-      process.env.FONT_URL_REGULAR = "https://cdn.example.com/font-regular.otf";
-      const config = loadConfig();
-      expect(config.fontUrlRegular).toBe(
-        "https://cdn.example.com/font-regular.otf"
-      );
-    });
-
-    it("FONT_URL_BOLD が設定されている場合はその値を返す", () => {
-      process.env.FONT_URL_BOLD = "https://cdn.example.com/font-bold.otf";
-      const config = loadConfig();
-      expect(config.fontUrlBold).toBe("https://cdn.example.com/font-bold.otf");
-    });
-
-    it("FONT_FETCH_TIMEOUT_MS が有効な数値の場合はその値を返す", () => {
-      process.env.FONT_FETCH_TIMEOUT_MS = "3000";
-      const config = loadConfig();
-      expect(config.fontFetchTimeoutMs).toBe(3000);
     });
 
     it("DEFAULT_WIDTH が有効な数値の場合はその値を返す", () => {
@@ -134,19 +74,6 @@ describe("loadConfig", () => {
   // 不正な数値型環境変数のフォールバックテスト
   // ────────────────────────────────────────────────
   describe("不正な数値型環境変数のフォールバック", () => {
-    it("FONT_FETCH_TIMEOUT_MS が 'abc' の場合はデフォルト値 5000 を使用し、コンソール警告を出す", () => {
-      process.env.FONT_FETCH_TIMEOUT_MS = "abc";
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-      const config = loadConfig();
-
-      expect(config.fontFetchTimeoutMs).toBe(5000);
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("FONT_FETCH_TIMEOUT_MS")
-      );
-      warnSpy.mockRestore();
-    });
-
     it("DEFAULT_WIDTH が 'invalid' の場合はデフォルト値 1200 を使用し、コンソール警告を出す", () => {
       process.env.DEFAULT_WIDTH = "invalid";
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
