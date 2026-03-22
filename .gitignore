@@ -29,3 +29,6 @@ tsconfig.tsbuildinfo
 
 # テスト成果物
 coverage/
+
+# npm install 時に生成される WASM バイナリ（prepare スクリプトで public/ にコピーされる）
+public/resvg.wasm

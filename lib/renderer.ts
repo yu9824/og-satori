@@ -1,12 +1,13 @@
 /**
- * ImageRenderer: satori / ImageResponse を使って JSX から画像を生成するモジュール
+ * ImageRenderer: satori と resvg-wasm を使って JSX から画像を生成するモジュール
  *
- * SVG 生成は satori を直接呼び出し、PNG 生成は next/og の ImageResponse を使用する。
- * どちらのパスも Cache-Control ヘッダーを上書きできるように設計されている。
+ * SVG 生成は satori を直接呼び出し、PNG 生成は satori で SVG を生成してから
+ * @resvg/resvg-wasm で PNG に変換する。
+ * next/og の二重バンドルを避けるため、next/og は使用しない。
  */
 
 import satori from "satori";
-import { ImageResponse } from "next/og";
+import { initWasm, Resvg } from "@resvg/resvg-wasm";
 import type React from "react";
 import type { FontData } from "./font";
 
@@ -18,6 +19,20 @@ export interface RenderOptions {
   height: number;
   /** satori に渡すフォントデータの配列 */
   fonts: FontData[];
+}
+
+// resvg WASM の初期化をキャッシュする（Edge Runtime のウォームリクエストで再初期化を避ける）
+let resvgInitialized = false;
+
+/**
+ * resvg WASM を初期化する（初回のみフェッチする）
+ *
+ * @param resvgWasmUrl - WASM バイナリを提供する URL（public/resvg.wasm）
+ */
+async function ensureResvgInit(resvgWasmUrl: string): Promise<void> {
+  if (resvgInitialized) return;
+  await initWasm(fetch(resvgWasmUrl));
+  resvgInitialized = true;
 }
 
 /**
@@ -45,29 +60,41 @@ export async function renderSVG(
 /**
  * JSX から PNG Response を生成する（タスク 6.2）
  *
- * next/og の ImageResponse を使って PNG Response を生成する。
- * ImageResponse が返す Response を再構築して Cache-Control ヘッダーを上書きできるようにする。
+ * satori で SVG を生成し、@resvg/resvg-wasm で PNG に変換する。
+ * next/og の ImageResponse は使用しない（二重バンドルによる 1 MB 超過を避けるため）。
  *
- * @param element - ImageResponse に渡す ReactElement
+ * @param element - satori に渡す ReactElement
  * @param options - 画像サイズとフォントデータ
+ * @param resvgWasmUrl - resvg WASM バイナリの URL（public/resvg.wasm）
  * @returns PNG 画像を含む Response（Cache-Control ヘッダーは呼び出し元で付与する）
  */
 export async function renderPNG(
   element: React.ReactElement,
-  options: RenderOptions
+  options: RenderOptions,
+  resvgWasmUrl: string
 ): Promise<Response> {
-  // next/og の ImageResponse でレンダリングする
-  const imageResponse = new ImageResponse(element, {
-    width: options.width,
-    height: options.height,
-    fonts: options.fonts,
+  // satori で SVG を生成する
+  const svg = await renderSVG(element, options);
+
+  // resvg WASM を初期化する（初回のみ）
+  await ensureResvgInit(resvgWasmUrl);
+
+  // SVG を PNG バイト列に変換する
+  const resvg = new Resvg(svg, {
+    fitTo: { mode: "original" },
   });
+  const pngData = resvg.render();
+  // Blob でラップして Edge Runtime の BodyInit 型と互換性を確保する
+  // resvg-wasm の asPng() が返す Uint8Array<ArrayBufferLike> を
+  // 標準の ArrayBuffer に変換して TypeScript の型制約を満たす
+  const rawPng = pngData.asPng();
+  const pngArrayBuffer = rawPng.buffer.slice(
+    rawPng.byteOffset,
+    rawPng.byteOffset + rawPng.byteLength
+  ) as ArrayBuffer;
+  const pngBlob = new Blob([pngArrayBuffer], { type: "image/png" });
 
-  // ImageResponse が返す Response の本体を取得して再構築する
-  // これにより Cache-Control ヘッダーを呼び出し元で自由に設定できる
-  const body = imageResponse.body;
-
-  return new Response(body, {
+  return new Response(pngBlob, {
     status: 200,
     headers: {
       // Content-Type は PNG に固定する

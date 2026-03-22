@@ -87,7 +87,9 @@ export async function GET(request: Request): Promise<Response> {
       });
     } else {
       // PNG フォーマット（デフォルト）
-      const pngResponse = await renderPNG(element, renderOptions);
+      // resvg WASM は public/ から静的配信する（Edge Function の JS バンドルサイズを削減するため）
+      const resvgWasmUrl = `${config.baseUrl}/resvg.wasm`;
+      const pngResponse = await renderPNG(element, renderOptions, resvgWasmUrl);
 
       // Cache-Control ヘッダーを付与して返す
       const headers = new Headers(pngResponse.headers);
