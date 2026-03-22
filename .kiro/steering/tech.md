@@ -65,5 +65,10 @@ Edge Runtime は非対応。理由：大容量 WASM（2.4MB）のロードに `i
 - `calc()` 非対応
 - WOFF2 非対応 → OTF/TTF を使用
 
+### テンプレートのレスポンシブスケーリング
+`lib/template.tsx` は画像の短辺を基準（`BASE_SHORT_SIDE = 630`）としたスケール係数でデザイントークンを動的にスケーリングする。
+- `_calcScaleFactor(width, height)` → `min(width, height) / BASE_SHORT_SIDE`
+- `_scaleTokens(scale, width, height)` → パディング・フォントサイズ等をクランプ付きでスケーリング
+
 ---
-_Updated: 2026-03-22 (sync: Node.js Runtime 移行反映)_
+_Updated: 2026-03-23 (sync: レスポンシブスケーリングパターン追加)_

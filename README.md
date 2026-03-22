@@ -7,6 +7,7 @@
 - Vercel Node.js Runtime で動作
 - SVG / PNG の両フォーマットに対応
 - Noto Sans JP ベースのサブセットフォント（OGSansJP）で日本語を正確に描画
+- 画像サイズに応じたレスポンシブスケーリング（短辺基準でデザイントークンを自動調整）
 - 環境変数による設定の外部化（フォーク・移植が容易）
 - TypeScript 実装、全ソースに日本語コメント付き
 
@@ -15,8 +16,8 @@
 ### 前提条件
 
 - Node.js 24.x
-- Vercel CLI（ローカル開発・デプロイ用）
 - Python 3 + fonttools（フォント生成用）
+- Vercel CLI（ローカル開発・デプロイ用）
 
 ### セットアップ
 
@@ -25,7 +26,7 @@
 git clone https://github.com/yu9824/og-satori.git
 cd og-satori
 
-# 依存関係のインストール
+# 依存関係のインストール（resvg.wasm も自動生成される）
 npm install
 
 # フォントの生成（初回のみ）
@@ -34,7 +35,7 @@ bash scripts/subset-fonts.sh
 
 # 環境変数のコピー
 cp .env.example .env.local
-# .env.local を編集して必要な値を設定する
+# 必要に応じて .env.local を編集する（デフォルト値のままでも動作する）
 
 # ローカル開発サーバーの起動
 npm run vercel-dev
@@ -51,19 +52,49 @@ npm run type-check # TypeScript の型チェックを実行
 
 ## デプロイ
 
-フォントは git 管理外のため、デプロイ前にローカルで生成しておく必要があります。
+### アセットの自動・手動生成について
+
+| アセット | 生成方法 | 対応状況 |
+|---------|---------|---------|
+| `public/resvg.wasm` | `npm install` の `prepare` スクリプトが自動コピー | **自動**（対応不要） |
+| `public/fonts/OGSansJP-*.otf` | `scripts/subset-fonts.sh` で手動生成 | **手動**（要対応） |
+
+`resvg.wasm` は `npm install` 実行時に `node_modules/@resvg/resvg-wasm/` から自動的にコピーされるため、手動での対応は不要です。
+
+フォント（`OGSansJP-Regular.otf` / `OGSansJP-Bold.otf`）は git 管理外のため、デプロイ前に生成が必要です。
+
+---
+
+### 方法 A: Vercel CLI でデプロイ（推奨）
+
+Vercel CLI はローカルファイルをアップロードするため、gitignore されたフォントも含めてデプロイできます。
 
 ```bash
-# フォント未生成の場合
+# フォントが未生成の場合は生成する
+pip install fonttools brotli   # 初回のみ
 bash scripts/subset-fonts.sh
 
-# Vercel CLI でデプロイ
+# 本番環境へデプロイ
 vercel --prod
 ```
 
+### 方法 B: Git 連携（GitHub → Vercel 自動デプロイ）
+
+Vercel ダッシュボードでビルドコマンドをカスタマイズします。
+
+**Vercel ダッシュボード → Settings → General → Build Command** に以下を設定：
+
+```bash
+pip install fonttools brotli && bash scripts/subset-fonts.sh && next build
+```
+
+> **注意**: Vercel のビルド環境には Python 3 が含まれていますが、fonttools は毎回インストールが必要です。ビルド時間が増加します。
+
+---
+
 ### 環境変数の設定
 
-Vercel ダッシュボードの「Settings > Environment Variables」で以下の環境変数を設定します。
+Vercel ダッシュボードの「Settings > Environment Variables」で以下の環境変数を設定します（すべてオプション）。
 
 ## 環境変数一覧
 
@@ -130,7 +161,7 @@ pip install fonttools brotli
 bash scripts/subset-fonts.sh
 ```
 
-スクリプトは Noto Sans JP（SIL OFL 1.1）をベースに、日本語・ASCII 文字のサブセットを生成し、フォント名を `OGSansJP` に変更して出力します（OFL の Reserved Font Name "Noto" を回避するため）。
+スクリプトは Noto Sans JP（SIL OFL 1.1）を GitHub Releases からダウンロードし、日本語・ASCII 文字のサブセットを生成します。OFL の Reserved Font Name 条項に従い、フォント名を `OGSansJP` に変更して出力します（`OGSansJP-Regular.otf` / `OGSansJP-Bold.otf`）。
 
 ## ライセンス
 
