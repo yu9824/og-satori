@@ -18,6 +18,8 @@
 1. When `renderTemplate` が `width` と `height` を持つ `OgParams` を受け取ったとき, the Template Renderer shall 参照解像度（1200×630）に対するスケール係数を算出し、`PADDING`・`TITLE_FONT_SIZE`・`LABEL_FONT_SIZE`・`ACCENT_LINE_HEIGHT`・`ACCENT_LINE_WIDTH` の各値にそのスケール係数を乗算した値を使用する。
 2. The Template Renderer shall スケール係数の算出に画像の短辺（`min(width, height)`）を用いることで、縦長・横長・正方形いずれのアスペクト比でも極端に大きな値が適用されないようにする。
 3. The Template Renderer shall スケーリング後の各トークンに下限値（最小値）を設けることで、極小サイズでも要素が消滅・重複しないようにする。
+4. The Template Renderer shall スケーリング後の `TITLE_FONT_SIZE` が 16px を下回らないよう下限クランプを適用し、視認性を確保する。
+5. The Template Renderer shall スケーリング後の `LABEL_FONT_SIZE` が 12px を下回らないよう下限クランプを適用し、視認性を確保する。
 4. When `width=400` かつ `height=210` のとき, the Template Renderer shall `PADDING` が基準値 64px 未満の値になる（スケールが適用されている）ことを保証する。
 5. When `width=1200` かつ `height=630` のとき, the Template Renderer shall スケール係数が 1.0 となり、既存のデザイントークンと同等の値が使用される。
 
@@ -30,7 +32,7 @@
 #### Acceptance Criteria
 
 1. When フォントサイズがスケーリングされたとき, the Template Renderer shall `truncateTitle` に渡す文字数上限（`charsPerLine`）をスケーリング後のフォントサイズと `textWidth` を使って再計算する。
-2. The Template Renderer shall スケーリング後の `TITLE_FONT_SIZE` が `0` にならないことを保証する（ゼロ除算の防止）。
+2. The Template Renderer shall スケーリング後の `TITLE_FONT_SIZE` が 16px 以上であることを保証する（視認性の確保およびゼロ除算の防止）。
 3. If `textWidth` が `0` 以下になる場合, the Template Renderer shall `textWidth` を `1` にクランプしタイトルを空文字として処理する。
 
 ---
