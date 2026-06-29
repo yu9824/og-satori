@@ -161,7 +161,7 @@ pip install fonttools brotli
 bash scripts/subset-fonts.sh
 ```
 
-スクリプトは Noto Sans JP（SIL OFL 1.1）を GitHub Releases からダウンロードし、日本語・ASCII 文字のサブセットを生成します。OFL の Reserved Font Name 条項に従い、フォント名を `OGSansJP` に変更して出力します（`OGSansJP-Regular.otf` / `OGSansJP-Bold.otf`）。
+スクリプトは Noto Sans JP（SIL OFL 1.1）を GitHub Releases からダウンロードし、日本語・ASCII 文字のサブセットを生成します。出力時にフォント名を `OGSansJP` に変更します（`OGSansJP-Regular.otf` / `OGSansJP-Bold.otf`）。なお本フォントの OFL Reserved Font Name は `Source`（Adobe Source Han Sans 由来）であり `Noto` ではないため、改名は OFL 上の義務ではなく、公式 Noto との誤認を避けるための措置です。
 
 ## ライセンス
 
@@ -172,5 +172,5 @@ bash scripts/subset-fonts.sh
 `scripts/subset-fonts.sh` が生成するフォント（OGSansJP）は Noto Sans JP を改変したものです。
 
 **ベースフォント: Noto Sans JP**
-Copyright © Google LLC and the Noto Authors
-[SIL Open Font License 1.1](https://scripts.sil.org/OFL)
+Copyright © 2014-2021 Adobe（Reserved Font Name `Source`）, Copyright © 2014-2021 Google LLC
+[SIL Open Font License 1.1](https://scripts.sil.org/OFL)（全文は [public/fonts/OFL.txt](public/fonts/OFL.txt)）

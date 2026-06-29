@@ -15,8 +15,8 @@
 #   - 句読点・記号 (U+3000–U+303F)
 #
 # 【出力先】
-#   - public/fonts/NotoSansJP-Regular.otf
-#   - public/fonts/NotoSansJP-Bold.otf
+#   - public/fonts/OGSansJP-Regular.otf
+#   - public/fonts/OGSansJP-Bold.otf
 #
 # 【ライセンス注意】
 #   --no-subset-tables+=name オプションは使用しない。
@@ -124,7 +124,9 @@ subset_font() {
     "--layout-features=*" \
     "--desubroutinize"
 
-  # OFL の Reserved Font Name "Noto" を削除するため、name テーブルを書き換える
+  # name テーブルのフォント名を OGSansJP に書き換える。
+  # 補足: 本フォントの OFL Reserved Font Name は 'Source'（Adobe Source Han Sans 由来）であり
+  # 'Noto' ではない。改名は OFL 上の義務ではなく、公式 Noto との誤認を避けるための措置。
   echo "→ フォント名を書き換え中: ${output_name}.otf"
   python3 - "$output_path" <<'PYEOF'
 import sys
