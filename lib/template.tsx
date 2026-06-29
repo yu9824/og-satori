@@ -57,14 +57,14 @@ export function _calcScaleFactor(width: number, height: number, baseShortSide: n
 // ★ カスタマイズはここだけ変更すればOK
 // ★ フォークして別のブログに適用する場合は、このブロックの値を変更してください
 
-/** 背景色（ダークスレート） */
-const BACKGROUND_COLOR = "#0f172a";
+/** 背景色（薄いブルーグレー）。サイト body 背景に合わせる */
+const BACKGROUND_COLOR = "#ecf2f5";
 
-/** 本文・タイトルの文字色（明るいグレー） */
-const TEXT_COLOR = "#f1f5f9";
+/** 本文・タイトルの文字色（ダークウォームグレー）。サイト本文色に合わせる */
+const TEXT_COLOR = "#3b3838";
 
-/** アクセントカラー（スカイブルー）。ブログ名の下線などに使用 */
-const ACCENT_COLOR = "#38bdf8";
+/** アクセントカラー（ティール）。サイトタイトル・見出しのブランドカラー。ブログ名の下線などに使用 */
+const ACCENT_COLOR = "#45859c";
 
 /** タイトルの基準フォントサイズ（px） */
 const TITLE_FONT_SIZE = 56;

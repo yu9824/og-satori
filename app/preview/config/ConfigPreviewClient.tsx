@@ -34,11 +34,11 @@ const HEX_COLOR_REGEX = /^#[0-9a-fA-F]{3,8}$/;
 function validateConfigState(state: ConfigPreviewState): string | null {
   if (!state.siteName.trim()) return "siteName は空にできません";
   if (!HEX_COLOR_REGEX.test(state.backgroundColor))
-    return `backgroundColor は CSS hex 形式で指定してください（例: #0f172a）`;
+    return `backgroundColor は CSS hex 形式で指定してください（例: #ecf2f5）`;
   if (!HEX_COLOR_REGEX.test(state.textColor))
-    return `textColor は CSS hex 形式で指定してください（例: #f1f5f9）`;
+    return `textColor は CSS hex 形式で指定してください（例: #3b3838）`;
   if (!HEX_COLOR_REGEX.test(state.accentColor))
-    return `accentColor は CSS hex 形式で指定してください（例: #38bdf8）`;
+    return `accentColor は CSS hex 形式で指定してください（例: #45859c）`;
   if (!Number.isInteger(state.baseShortSide) || state.baseShortSide < 1)
     return "baseShortSide は正の整数で指定してください";
   return null;
@@ -294,7 +294,7 @@ export function ConfigPreviewClient({ initialConfig }: ConfigPreviewClientProps)
                   handleChange({ backgroundColor: e.target.value })
                 }
                 style={{ ...inputStyle, flex: 1 }}
-                placeholder="#0f172a"
+                placeholder="#ecf2f5"
               />
             </div>
           </label>
@@ -316,7 +316,7 @@ export function ConfigPreviewClient({ initialConfig }: ConfigPreviewClientProps)
                 value={state.textColor}
                 onChange={(e) => handleChange({ textColor: e.target.value })}
                 style={{ ...inputStyle, flex: 1 }}
-                placeholder="#f1f5f9"
+                placeholder="#3b3838"
               />
             </div>
           </label>
@@ -340,7 +340,7 @@ export function ConfigPreviewClient({ initialConfig }: ConfigPreviewClientProps)
                 value={state.accentColor}
                 onChange={(e) => handleChange({ accentColor: e.target.value })}
                 style={{ ...inputStyle, flex: 1 }}
-                placeholder="#38bdf8"
+                placeholder="#45859c"
               />
             </div>
           </label>

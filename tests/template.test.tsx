@@ -265,10 +265,10 @@ describe("renderTemplate", () => {
   });
 
   describe("色オーバーライド", () => {
-    it("colorOverrides 未指定時はデフォルト背景色（#0f172a）が使われる", () => {
+    it("colorOverrides 未指定時はデフォルト背景色（#ecf2f5）が使われる", () => {
       const element = renderTemplate(baseInput);
       const json = JSON.stringify(element);
-      expect(json).toContain("#0f172a");
+      expect(json).toContain("#ecf2f5");
     });
 
     it("backgroundColor オーバーライド時は指定色が背景色に使われる", () => {
@@ -279,7 +279,7 @@ describe("renderTemplate", () => {
       });
       const json = JSON.stringify(element);
       expect(json).toContain("#ff0000");
-      expect(json).not.toContain("#0f172a");
+      expect(json).not.toContain("#ecf2f5");
     });
 
     it("accentColor オーバーライド時は指定色がアクセントに使われる", () => {
@@ -290,7 +290,7 @@ describe("renderTemplate", () => {
       });
       const json = JSON.stringify(element);
       expect(json).toContain("#00ff00");
-      expect(json).not.toContain("#38bdf8"); // デフォルトACCENT_COLORが使われていない
+      expect(json).not.toContain("#45859c"); // デフォルトACCENT_COLORが使われていない
     });
   });
 

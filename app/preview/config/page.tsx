@@ -24,9 +24,9 @@ export default function ConfigPreviewPage() {
     textWidth: Math.floor(width * config.defaultTextWidthRatio),
     siteName: config.siteName,
     defaultTextWidthRatio: config.defaultTextWidthRatio,
-    backgroundColor: "#0f172a",
-    textColor: "#f1f5f9",
-    accentColor: "#38bdf8",
+    backgroundColor: "#ecf2f5",
+    textColor: "#3b3838",
+    accentColor: "#45859c",
     baseShortSide: 630,
   };
 
