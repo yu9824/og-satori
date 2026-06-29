@@ -2,7 +2,7 @@
 
 ## Architecture
 
-Node.js Runtime。本番用の単一エンドポイント `GET /api/og` が設定読み込み → パラメータ解析 → フォント読み込み → テンプレート生成 → レンダリングを順次実行する。これに加えて、`lib/` の同じモジュール群を再利用するローカル開発専用のプレビュー層（`/preview` ページ群と `/api/preview-og`）が独立して存在し、本番エンドポイントには影響しない。
+Node.js Runtime シングルエンドポイント。`GET /api/og` が設定読み込み → パラメータ解析 → フォント読み込み → テンプレート生成 → レンダリングを順次実行する。
 
 ## Core Technologies
 
@@ -71,11 +71,8 @@ Edge Runtime は非対応。理由：大容量 WASM（2.4MB）のロードに `i
 - `_calcScaleFactor(width, height)` → `min(width, height) / BASE_SHORT_SIDE`
 - `_scaleTokens(scale, width, height)` → パディング・フォントサイズ等をクランプ付きでスケーリング
 
-### ローカルプレビュー層と本番の分離
-プレビュー機能（色・siteName・baseShortSide のオーバーライド）は本番エンドポイント `/api/og` に露出させない。開発専用のルート（`/api/preview-og`、`/preview/config`）は冒頭で `if (process.env.NODE_ENV === "production") notFound();` のプロダクションガードを置き、本番では 404 を返す。`/preview`（画像確認ページ）のみガードなしで本番でも動作する。色オーバーライドは `lib/template.tsx` の `ColorOverrides` 型（`renderTemplate` の `colorOverrides`）経由で渡す。
-
-### Server / Client Component の分担
-プレビューページは React Server Component（`page.tsx`）が `loadConfig()` で初期値を解決し、`"use client"` を付けた `*Client.tsx`（`PreviewClient` / `ConfigPreviewClient`）が対話 UI を担う。バリデーションはクライアント側に委ね、Server 側は型変換のみ行う。
+### 色・サイズのカスタマイズ方針
+背景色・文字色・フォントサイズ等のデザイントークンは `lib/template.tsx` 先頭の定数（`BACKGROUND_COLOR` 等）でのみ変更する。実行時のクエリパラメータや環境変数では上書きしない。ランタイムでの色オーバーライド機能は保守負荷に見合わないため持たない方針。
 
 ---
-_Updated: 2026-06-30 (sync: ローカルプレビュー層・Server/Client 分担・スナップショットテスト追加)_
+_Updated: 2026-06-30 (sync: ローカルプレビュー機能を削除。スナップショットテスト導入を反映)_

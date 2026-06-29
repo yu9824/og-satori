@@ -46,11 +46,10 @@ const BASE_SHORT_SIDE = 630;
  *
  * @param width - 画像幅（px）
  * @param height - 画像高さ（px）
- * @param baseShortSide - スケーリングの基準短辺長（px）。未指定時は BASE_SHORT_SIDE 定数を使用
- * @returns `min(width, height) / baseShortSide`
+ * @returns `min(width, height) / BASE_SHORT_SIDE`
  */
-export function _calcScaleFactor(width: number, height: number, baseShortSide: number = BASE_SHORT_SIDE): number {
-  return Math.min(width, height) / baseShortSide;
+export function _calcScaleFactor(width: number, height: number): number {
+  return Math.min(width, height) / BASE_SHORT_SIDE;
 }
 
 // ── DESIGN TOKENS ──────────────────────────────────────────────────────────
@@ -123,33 +122,12 @@ export function _scaleTokens(
 
 // ── END SCALED TOKENS ──────────────────────────────────────────────────────
 
-/**
- * 色のオーバーライド設定
- *
- * 未指定のフィールドはデフォルトのデザイントークン定数が使われる。
- */
-export interface ColorOverrides {
-  /** 背景色のオーバーライド */
-  backgroundColor?: string;
-  /** テキスト色のオーバーライド */
-  textColor?: string;
-  /** アクセントカラーのオーバーライド */
-  accentColor?: string;
-}
-
 /** テンプレートへの入力 */
 export interface RenderInput {
   /** URLクエリパラメータから解析された OgParams */
   params: OgParams;
   /** 環境変数から読み取った AppConfig */
   config: AppConfig;
-  /**
-   * フォントスケーリングの基準短辺長（px）。
-   * 未指定時は BASE_SHORT_SIDE 定数を使用
-   */
-  baseShortSide?: number;
-  /** 色のオーバーライド設定。未指定時はデフォルトのデザイントークンが使われる */
-  colorOverrides?: ColorOverrides;
 }
 
 /**
@@ -166,13 +144,8 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
   const { title, width, height, textWidth } = params;
   const { siteName } = config;
 
-  // 色のオーバーライドを解決する
-  const bgColor = input.colorOverrides?.backgroundColor ?? BACKGROUND_COLOR;
-  const textColor = input.colorOverrides?.textColor ?? TEXT_COLOR;
-  const accentColor = input.colorOverrides?.accentColor ?? ACCENT_COLOR;
-
   // スケール係数とクランプ済みトークンを算出する
-  const scale = _calcScaleFactor(width, height, input.baseShortSide ?? BASE_SHORT_SIDE);
+  const scale = _calcScaleFactor(width, height);
   const tokens = _scaleTokens(scale, width, height);
 
   // 中央寄せレイアウト計算（satori が calc() 非対応のため JS で事前計算）
@@ -196,7 +169,7 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
         justifyContent: "space-between",
         width: `${width}px`,
         height: `${height}px`,
-        backgroundColor: bgColor,
+        backgroundColor: BACKGROUND_COLOR,
         padding: `${tokens.padding}px`,
         fontFamily: '"OGSansJP", sans-serif',
         boxSizing: "border-box",
@@ -225,7 +198,7 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
             style={{
               fontSize: `${tokens.titleFontSize}px`,
               fontWeight: 700,
-              color: textColor,
+              color: TEXT_COLOR,
               lineHeight: 1.4,
               wordBreak: "break-all",
               // 3 行省略: satori での動作確認が必要
@@ -255,7 +228,7 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
             display: "flex",
             width: `${tokens.accentLineWidth}px`,
             height: `${tokens.accentLineHeight}px`,
-            backgroundColor: accentColor,
+            backgroundColor: ACCENT_COLOR,
             borderRadius: `${tokens.accentLineHeight / 2}px`,
           }}
         />
@@ -264,7 +237,7 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
           style={{
             fontSize: `${tokens.labelFontSize}px`,
             fontWeight: 400,
-            color: accentColor,
+            color: ACCENT_COLOR,
           }}
         >
           {siteName}
