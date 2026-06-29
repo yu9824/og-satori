@@ -9,6 +9,25 @@
  * - calc() は非対応
  * - WOFF2 は非対応（OTF/TTF を使用）
  * - useState/useEffect は使用不可
+ *
+ * 【レイアウト計算ロジック】
+ * satori が calc() 非対応のため、タイトル水平中央寄せをJS側で事前計算する。
+ *
+ * - effectiveTextWidth: textWidth を width でクランプした実効テキスト幅
+ *   = Math.min(textWidth, width)
+ *   （textWidth が画像幅を超えている場合は画像幅を上限とする）
+ *
+ * - centerOffset: 画像全体の中央に effectiveTextWidth のブロックを置くための
+ *   左端オフセット（padding を含む座標空間での中央位置）
+ *   = Math.floor((width - effectiveTextWidth) / 2)
+ *
+ * - innerMarginLeft: padding 内側コンテンツ座標での左マージン
+ *   外側コンテナがすでに padding 分だけ内側にあるため、centerOffset から
+ *   padding を差し引いた値。負になる場合は 0 でクランプする。
+ *   = Math.max(0, centerOffset - tokens.padding)
+ *
+ * このマージンをタイトルコンテナとフッターコンテナの両方に適用することで、
+ * タイトルとフッターが同じ左端に揃い、かつ画像の水平中央に配置される。
  */
 
 import React from "react";
@@ -27,10 +46,11 @@ const BASE_SHORT_SIDE = 630;
  *
  * @param width - 画像幅（px）
  * @param height - 画像高さ（px）
- * @returns `min(width, height) / BASE_SHORT_SIDE`
+ * @param baseShortSide - スケーリングの基準短辺長（px）。未指定時は BASE_SHORT_SIDE 定数を使用
+ * @returns `min(width, height) / baseShortSide`
  */
-export function _calcScaleFactor(width: number, height: number): number {
-  return Math.min(width, height) / BASE_SHORT_SIDE;
+export function _calcScaleFactor(width: number, height: number, baseShortSide: number = BASE_SHORT_SIDE): number {
+  return Math.min(width, height) / baseShortSide;
 }
 
 // ── DESIGN TOKENS ──────────────────────────────────────────────────────────
@@ -103,12 +123,33 @@ export function _scaleTokens(
 
 // ── END SCALED TOKENS ──────────────────────────────────────────────────────
 
+/**
+ * 色のオーバーライド設定
+ *
+ * 未指定のフィールドはデフォルトのデザイントークン定数が使われる。
+ */
+export interface ColorOverrides {
+  /** 背景色のオーバーライド */
+  backgroundColor?: string;
+  /** テキスト色のオーバーライド */
+  textColor?: string;
+  /** アクセントカラーのオーバーライド */
+  accentColor?: string;
+}
+
 /** テンプレートへの入力 */
 export interface RenderInput {
   /** URLクエリパラメータから解析された OgParams */
   params: OgParams;
   /** 環境変数から読み取った AppConfig */
   config: AppConfig;
+  /**
+   * フォントスケーリングの基準短辺長（px）。
+   * 未指定時は BASE_SHORT_SIDE 定数を使用
+   */
+  baseShortSide?: number;
+  /** 色のオーバーライド設定。未指定時はデフォルトのデザイントークンが使われる */
+  colorOverrides?: ColorOverrides;
 }
 
 /**
@@ -125,13 +166,26 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
   const { title, width, height, textWidth } = params;
   const { siteName } = config;
 
+  // 色のオーバーライドを解決する
+  const bgColor = input.colorOverrides?.backgroundColor ?? BACKGROUND_COLOR;
+  const textColor = input.colorOverrides?.textColor ?? TEXT_COLOR;
+  const accentColor = input.colorOverrides?.accentColor ?? ACCENT_COLOR;
+
   // スケール係数とクランプ済みトークンを算出する
-  const scale = _calcScaleFactor(width, height);
+  const scale = _calcScaleFactor(width, height, input.baseShortSide ?? BASE_SHORT_SIDE);
   const tokens = _scaleTokens(scale, width, height);
+
+  // 中央寄せレイアウト計算（satori が calc() 非対応のため JS で事前計算）
+  // effectiveTextWidth: textWidth を width でクランプした実効テキスト幅
+  const effectiveTextWidth = Math.min(textWidth, width);
+  // centerOffset: 画像全体の中央に effectiveTextWidth ブロックを置くための左端オフセット
+  const centerOffset = Math.floor((width - effectiveTextWidth) / 2);
+  // innerMarginLeft: padding 内側コンテンツ座標での左マージン（負にならないようクランプ）
+  const innerMarginLeft = Math.max(0, centerOffset - tokens.padding);
 
   // タイトルが長すぎる場合の手動省略処理
   // satori の -webkit-line-clamp は部分サポートのため、フォールバックとして実装する
-  const truncatedTitle = truncateTitle(title, textWidth, tokens.titleFontSize);
+  const truncatedTitle = truncateTitle(title, effectiveTextWidth, tokens.titleFontSize);
 
   return (
     <div
@@ -142,7 +196,7 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
         justifyContent: "space-between",
         width: `${width}px`,
         height: `${height}px`,
-        backgroundColor: BACKGROUND_COLOR,
+        backgroundColor: bgColor,
         padding: `${tokens.padding}px`,
         fontFamily: '"OGSansJP", sans-serif',
         boxSizing: "border-box",
@@ -158,18 +212,20 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
       >
         <div
           style={{
-            // テキスト折り返し制御: textWidth でテキスト幅を制限する
+            // テキスト折り返し制御: effectiveTextWidth でテキスト幅を制限する
+            // marginLeft で水平中央に寄せる（satori が calc() 非対応のため JS で事前計算済み）
             display: "flex",
             flexDirection: "column",
-            width: `${textWidth}px`,
-            maxWidth: `${textWidth}px`,
+            width: `${effectiveTextWidth}px`,
+            maxWidth: `${effectiveTextWidth}px`,
+            marginLeft: innerMarginLeft,
           }}
         >
           <span
             style={{
               fontSize: `${tokens.titleFontSize}px`,
               fontWeight: 700,
-              color: TEXT_COLOR,
+              color: textColor,
               lineHeight: 1.4,
               wordBreak: "break-all",
               // 3 行省略: satori での動作確認が必要
@@ -190,6 +246,7 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
           display: "flex",
           flexDirection: "column",
           gap: `${tokens.accentLineHeight * 3}px`,
+          marginLeft: innerMarginLeft,
         }}
       >
         {/* アクセントライン */}
@@ -198,7 +255,7 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
             display: "flex",
             width: `${tokens.accentLineWidth}px`,
             height: `${tokens.accentLineHeight}px`,
-            backgroundColor: ACCENT_COLOR,
+            backgroundColor: accentColor,
             borderRadius: `${tokens.accentLineHeight / 2}px`,
           }}
         />
@@ -207,7 +264,7 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
           style={{
             fontSize: `${tokens.labelFontSize}px`,
             fontWeight: 400,
-            color: ACCENT_COLOR,
+            color: accentColor,
           }}
         >
           {siteName}

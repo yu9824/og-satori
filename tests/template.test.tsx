@@ -11,6 +11,8 @@ import { describe, it, expect } from "vitest";
 import React from "react";
 import { renderTemplate, _calcScaleFactor, _scaleTokens } from "../lib/template";
 import type { RenderInput } from "../lib/template";
+// ColorOverrides は型チェックのためにインポート（未使用変数にならないよう型アサーションで使用）
+import type { ColorOverrides } from "../lib/template";
 
 /** テスト用のデフォルト入力 */
 const baseInput: RenderInput = {
@@ -208,6 +210,87 @@ describe("renderTemplate", () => {
       const json = JSON.stringify(element);
       expect(json).toContain('"56px"');
       expect(json).toContain('"64px"');
+    });
+  });
+
+  describe("中央寄せレイアウト計算", () => {
+    it("textWidth < width のとき innerMarginLeft が正になる（width=1200, textWidth=960, padding=64 → innerMarginLeft=56）", () => {
+      const element = renderTemplate(baseInput); // width=1200, textWidth=960
+      const json = JSON.stringify(element);
+      // タイトルコンテナの marginLeft が 56 であることを確認
+      expect(json).toContain('"marginLeft":56');
+    });
+
+    it("textWidth === width のとき innerMarginLeft が 0 になる", () => {
+      const element = renderTemplate({
+        ...baseInput,
+        params: { ...baseInput.params, textWidth: 1200, width: 1200 },
+      });
+      const json = JSON.stringify(element);
+      // innerMarginLeft=max(0, 0-64)=0
+      // marginLeft:0 が含まれることを確認（またはフッターのタイトルと同じマージンが 0）
+      // JSONにmarginLeft:56等のオフセットが含まれないことを確認
+      expect(json).not.toContain('"marginLeft":56');
+    });
+
+    it("textWidth > width のときは width にクランプされる", () => {
+      const element = renderTemplate({
+        ...baseInput,
+        params: { ...baseInput.params, textWidth: 1500, width: 1200 },
+      });
+      const json = JSON.stringify(element);
+      // effectiveTextWidth=1200, centerOffset=0, innerMarginLeft=0
+      // widthとして1500が使われていない
+      expect(json).not.toContain('"width":"1500px"');
+    });
+  });
+
+  describe("baseShortSide オーバーライド", () => {
+    it("baseShortSide=1260 を指定すると scale が半分になる（1200x630 → min=630 → 630/1260=0.5）", () => {
+      const element = renderTemplate({
+        ...baseInput,
+        baseShortSide: 1260,
+      });
+      const json = JSON.stringify(element);
+      // scale=0.5 → titleFontSize = max(16, 56*0.5) = 28
+      expect(json).toContain('"28px"');
+      expect(json).not.toContain('"56px"');
+    });
+
+    it("baseShortSide 未指定時はデフォルト（BASE_SHORT_SIDE=630）が使われる", () => {
+      const element = renderTemplate(baseInput); // width=1200, height=630 → scale=1.0
+      const json = JSON.stringify(element);
+      expect(json).toContain('"56px"'); // titleFontSize=56
+    });
+  });
+
+  describe("色オーバーライド", () => {
+    it("colorOverrides 未指定時はデフォルト背景色（#0f172a）が使われる", () => {
+      const element = renderTemplate(baseInput);
+      const json = JSON.stringify(element);
+      expect(json).toContain("#0f172a");
+    });
+
+    it("backgroundColor オーバーライド時は指定色が背景色に使われる", () => {
+      const overrides: ColorOverrides = { backgroundColor: "#ff0000" };
+      const element = renderTemplate({
+        ...baseInput,
+        colorOverrides: overrides,
+      });
+      const json = JSON.stringify(element);
+      expect(json).toContain("#ff0000");
+      expect(json).not.toContain("#0f172a");
+    });
+
+    it("accentColor オーバーライド時は指定色がアクセントに使われる", () => {
+      const overrides: ColorOverrides = { accentColor: "#00ff00" };
+      const element = renderTemplate({
+        ...baseInput,
+        colorOverrides: overrides,
+      });
+      const json = JSON.stringify(element);
+      expect(json).toContain("#00ff00");
+      expect(json).not.toContain("#38bdf8"); // デフォルトACCENT_COLORが使われていない
     });
   });
 
