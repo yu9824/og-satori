@@ -41,7 +41,7 @@ cp .env.example .env.local
 npm run vercel-dev
 ```
 
-ブラウザで `http://localhost:3000/api/og?title=Hello+World` を開くと OGP 画像が表示されます。
+ブラウザで `http://localhost:3000/api/og?title=Hello%20World` を開くと OGP 画像が表示されます。
 
 ### テストの実行
 
