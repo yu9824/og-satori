@@ -46,11 +46,10 @@ const BASE_SHORT_SIDE = 630;
  *
  * @param width - 画像幅（px）
  * @param height - 画像高さ（px）
- * @param baseShortSide - スケーリングの基準短辺長（px）。未指定時は BASE_SHORT_SIDE 定数を使用
- * @returns `min(width, height) / baseShortSide`
+ * @returns `min(width, height) / BASE_SHORT_SIDE`
  */
-export function _calcScaleFactor(width: number, height: number, baseShortSide: number = BASE_SHORT_SIDE): number {
-  return Math.min(width, height) / baseShortSide;
+export function _calcScaleFactor(width: number, height: number): number {
+  return Math.min(width, height) / BASE_SHORT_SIDE;
 }
 
 // ── DESIGN TOKENS ──────────────────────────────────────────────────────────
@@ -95,27 +94,52 @@ interface ScaledTokens {
 }
 
 /**
+ * フォントサイズのオーバーライド（クエリ指定値）。
+ *
+ * 指定されたフィールドはスケール・最小クランプを適用せず、実効フォントサイズ（絶対 px）として
+ * そのまま採用する。未指定（`undefined`）のフィールドは既存のスケーリング挙動を適用する。
+ *
+ * クエリ語彙との対応: `title` ← `titleFontSize`、`label` ← `siteFontSize`。
+ */
+export interface FontSizeOverrides {
+  /** タイトル指定値（px）。undefined なら `TITLE_FONT_SIZE × scale` + 16px クランプ */
+  title?: number;
+  /** ラベル指定値（px）。undefined なら `LABEL_FONT_SIZE × scale` + 12px クランプ */
+  label?: number;
+}
+
+/**
  * スケール係数と画像サイズを受け取り、クランプ済みデザイントークンを返す純粋関数
  *
  * `_` プレフィックスはテスト専用公開関数であることを示す。
  *
+ * フォントサイズは `fontSizeOverrides` で個別に上書きできる。指定された場合は
+ * スケール・最小クランプを適用せず指定値をそのまま使用し、未指定の場合のみ
+ * 既定トークン（`TITLE_FONT_SIZE` / `LABEL_FONT_SIZE`）にスケール・クランプを適用する。
+ * `padding` やアクセントライン等、フォントサイズ以外のトークンは常にスケーリングする。
+ *
  * @param scale - スケール係数（`_calcScaleFactor` の戻り値）
  * @param width - 画像幅（px）
  * @param height - 画像高さ（px）
+ * @param fontSizeOverrides - フォントサイズの上書き（省略時は全て従来挙動）
  * @returns クランプ済みの `ScaledTokens`
  */
 export function _scaleTokens(
   scale: number,
   width: number,
-  height: number
+  height: number,
+  fontSizeOverrides?: FontSizeOverrides
 ): ScaledTokens {
   return {
     padding: Math.max(
       1,
       Math.min(PADDING * scale, width * 0.25, height * 0.25)
     ),
-    titleFontSize: Math.max(16, TITLE_FONT_SIZE * scale),
-    labelFontSize: Math.max(12, LABEL_FONT_SIZE * scale),
+    // 指定値があればスケール・クランプ非適用、なければ従来式（トークン × scale + 最小クランプ）
+    titleFontSize:
+      fontSizeOverrides?.title ?? Math.max(16, TITLE_FONT_SIZE * scale),
+    labelFontSize:
+      fontSizeOverrides?.label ?? Math.max(12, LABEL_FONT_SIZE * scale),
     accentLineHeight: Math.max(1, ACCENT_LINE_HEIGHT * scale),
     accentLineWidth: Math.max(4, ACCENT_LINE_WIDTH * scale),
   };
@@ -123,33 +147,12 @@ export function _scaleTokens(
 
 // ── END SCALED TOKENS ──────────────────────────────────────────────────────
 
-/**
- * 色のオーバーライド設定
- *
- * 未指定のフィールドはデフォルトのデザイントークン定数が使われる。
- */
-export interface ColorOverrides {
-  /** 背景色のオーバーライド */
-  backgroundColor?: string;
-  /** テキスト色のオーバーライド */
-  textColor?: string;
-  /** アクセントカラーのオーバーライド */
-  accentColor?: string;
-}
-
 /** テンプレートへの入力 */
 export interface RenderInput {
   /** URLクエリパラメータから解析された OgParams */
   params: OgParams;
   /** 環境変数から読み取った AppConfig */
   config: AppConfig;
-  /**
-   * フォントスケーリングの基準短辺長（px）。
-   * 未指定時は BASE_SHORT_SIDE 定数を使用
-   */
-  baseShortSide?: number;
-  /** 色のオーバーライド設定。未指定時はデフォルトのデザイントークンが使われる */
-  colorOverrides?: ColorOverrides;
 }
 
 /**
@@ -163,17 +166,17 @@ export interface RenderInput {
  */
 export function renderTemplate(input: RenderInput): React.ReactElement {
   const { params, config } = input;
-  const { title, width, height, textWidth } = params;
+  const { title, width, height, textWidth, titleFontSize, siteFontSize } = params;
   const { siteName } = config;
 
-  // 色のオーバーライドを解決する
-  const bgColor = input.colorOverrides?.backgroundColor ?? BACKGROUND_COLOR;
-  const textColor = input.colorOverrides?.textColor ?? TEXT_COLOR;
-  const accentColor = input.colorOverrides?.accentColor ?? ACCENT_COLOR;
-
   // スケール係数とクランプ済みトークンを算出する
-  const scale = _calcScaleFactor(width, height, input.baseShortSide ?? BASE_SHORT_SIDE);
-  const tokens = _scaleTokens(scale, width, height);
+  // フォントサイズ指定値があればスケール・クランプを迂回して採用する
+  // （クエリ語彙 titleFontSize/siteFontSize → 内部トークン title/label に対応付け）
+  const scale = _calcScaleFactor(width, height);
+  const tokens = _scaleTokens(scale, width, height, {
+    title: titleFontSize,
+    label: siteFontSize,
+  });
 
   // 中央寄せレイアウト計算（satori が calc() 非対応のため JS で事前計算）
   // effectiveTextWidth: textWidth を width でクランプした実効テキスト幅
@@ -196,7 +199,7 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
         justifyContent: "space-between",
         width: `${width}px`,
         height: `${height}px`,
-        backgroundColor: bgColor,
+        backgroundColor: BACKGROUND_COLOR,
         padding: `${tokens.padding}px`,
         fontFamily: '"OGSansJP", sans-serif',
         boxSizing: "border-box",
@@ -225,7 +228,7 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
             style={{
               fontSize: `${tokens.titleFontSize}px`,
               fontWeight: 700,
-              color: textColor,
+              color: TEXT_COLOR,
               lineHeight: 1.4,
               wordBreak: "break-all",
               // 3 行省略: satori での動作確認が必要
@@ -255,7 +258,7 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
             display: "flex",
             width: `${tokens.accentLineWidth}px`,
             height: `${tokens.accentLineHeight}px`,
-            backgroundColor: accentColor,
+            backgroundColor: ACCENT_COLOR,
             borderRadius: `${tokens.accentLineHeight / 2}px`,
           }}
         />
@@ -264,7 +267,7 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
           style={{
             fontSize: `${tokens.labelFontSize}px`,
             fontWeight: 400,
-            color: accentColor,
+            color: ACCENT_COLOR,
           }}
         >
           {siteName}
@@ -292,7 +295,11 @@ function truncateTitle(title: string, textWidth: number, fontSize: number): stri
   // 1 行あたりの概算文字数（フォントサイズとテキスト幅から計算）
   // fontSize * 0.6 は半角文字の概算幅（全角文字はその 2 倍）
   // ここでは全角文字基準で計算する（日本語タイトルを想定）
-  const charsPerLine = Math.floor(textWidth / fontSize);
+  //
+  // 境界ガード: フォントサイズ上書きで fontSize > textWidth になると
+  // Math.floor(textWidth / fontSize) が 0 となり、maxChars=0 → slice(0, -1) で
+  // 末尾 1 文字を欠落させた異常出力を生む。Math.max(1, …) で最低 1 文字/行を保証する。
+  const charsPerLine = Math.max(1, Math.floor(textWidth / fontSize));
   const maxChars = charsPerLine * 3; // 3 行分
 
   if (title.length <= maxChars) {
