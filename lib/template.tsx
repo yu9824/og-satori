@@ -71,8 +71,14 @@ const TITLE_FONT_SIZE = 56;
 /** ブログ名ラベルのフォントサイズ（px） */
 const LABEL_FONT_SIZE = 28;
 
-/** 外周の余白（px） */
+/** 外周の左右余白（px） */
 const PADDING = 64;
+
+/** 外周の上下余白（px）。文字をより多く収めるため左右より小さめにする */
+const VERTICAL_PADDING = 40;
+
+/** タイトルの最大行数（これを超える分は「…」で省略） */
+const TITLE_MAX_LINES = 4;
 
 /** アクセントラインの高さ（px） */
 const ACCENT_LINE_HEIGHT = 4;
@@ -86,7 +92,10 @@ const ACCENT_LINE_WIDTH = 48;
 
 /** スケーリング済みデザイントークンの型 */
 interface ScaledTokens {
+  /** 左右余白（px） */
   padding: number;
+  /** 上下余白（px） */
+  paddingY: number;
   titleFontSize: number;
   labelFontSize: number;
   accentLineHeight: number;
@@ -135,6 +144,8 @@ export function _scaleTokens(
       1,
       Math.min(PADDING * scale, width * 0.25, height * 0.25)
     ),
+    // 上下余白は左右と独立。高さの 25% を上限にクランプする
+    paddingY: Math.max(1, Math.min(VERTICAL_PADDING * scale, height * 0.25)),
     // 指定値があればスケール・クランプ非適用、なければ従来式（トークン × scale + 最小クランプ）
     titleFontSize:
       fontSizeOverrides?.title ?? Math.max(16, TITLE_FONT_SIZE * scale),
@@ -200,7 +211,7 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
         width: `${width}px`,
         height: `${height}px`,
         backgroundColor: BACKGROUND_COLOR,
-        padding: `${tokens.padding}px`,
+        padding: `${tokens.paddingY}px ${tokens.padding}px`,
         fontFamily: '"OGSansJP", sans-serif',
         boxSizing: "border-box",
       }}
@@ -231,9 +242,9 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
               color: TEXT_COLOR,
               lineHeight: 1.4,
               wordBreak: "break-all",
-              // 3 行省略: satori での動作確認が必要
+              // 最大行数で省略: satori での動作確認が必要
               display: "-webkit-box",
-              WebkitLineClamp: 3,
+              WebkitLineClamp: TITLE_MAX_LINES,
               WebkitBoxOrient: "vertical",
               overflow: "hidden",
             }}
@@ -281,7 +292,7 @@ export function renderTemplate(input: RenderInput): React.ReactElement {
  * タイトルを指定された幅に収まるように省略するヘルパー関数
  *
  * satori の -webkit-line-clamp が動作しない場合のフォールバックとして、
- * 概算で 3 行を超える文字数でスライスして「…」を付与する。
+ * 概算で TITLE_MAX_LINES 行を超える文字数でスライスして「…」を付与する。
  * 正確な行数計算はフォントメトリクスに依存するため、ここでは文字数ベースの近似値を使う。
  *
  * @param title - 元のタイトル文字列
@@ -300,7 +311,7 @@ function truncateTitle(title: string, textWidth: number, fontSize: number): stri
   // Math.floor(textWidth / fontSize) が 0 となり、maxChars=0 → slice(0, -1) で
   // 末尾 1 文字を欠落させた異常出力を生む。Math.max(1, …) で最低 1 文字/行を保証する。
   const charsPerLine = Math.max(1, Math.floor(textWidth / fontSize));
-  const maxChars = charsPerLine * 3; // 3 行分
+  const maxChars = charsPerLine * TITLE_MAX_LINES; // 最大行数分
 
   if (title.length <= maxChars) {
     return title;

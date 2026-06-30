@@ -246,7 +246,8 @@ describe("renderTemplate", () => {
       const element = renderTemplate(baseInput);
       const json = JSON.stringify(element);
       expect(json).toContain('"56px"');
-      expect(json).toContain('"64px"');
+      // padding は上下 40px / 左右 64px のショートハンド
+      expect(json).toContain('"40px 64px"');
     });
   });
 
@@ -362,8 +363,8 @@ describe("renderTemplate", () => {
     });
 
     it("titleFontSize 指定時、truncateTitle が描画と同一の実効サイズを使う（Req 4.5）", () => {
-      // 30 文字のタイトル。デフォルト 56px なら maxChars=51 で全文、
-      // 200px 指定なら charsPerLine=floor(960/200)=4, maxChars=12 で省略される。
+      // 30 文字のタイトル。デフォルト 56px なら maxChars=68 で全文、
+      // 200px 指定なら charsPerLine=floor(960/200)=4, maxChars=4*4=16 で省略される。
       const longTitle = "あ".repeat(30);
       const element = renderTemplate({
         ...baseInput,
@@ -371,9 +372,9 @@ describe("renderTemplate", () => {
       });
       const json = JSON.stringify(element);
       expect(json).toContain('"fontSize":"200px"');
-      // 200px に基づき 11 文字 + … に省略される（56px のままなら 30 文字全文）
-      expect(json).toContain("あ".repeat(11) + "…");
-      expect(json).not.toContain("あ".repeat(12));
+      // 200px に基づき 15 文字 + … に省略される（56px のままなら 30 文字全文）
+      expect(json).toContain("あ".repeat(15) + "…");
+      expect(json).not.toContain("あ".repeat(16));
     });
 
     it("オーバーライド未指定時は既定スケーリング値（56px / 28px）を使う", () => {
