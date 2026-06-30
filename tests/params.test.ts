@@ -296,4 +296,144 @@ describe("parseParams", () => {
       expect(result.error.code).toBe("TITLE_TOO_LONG");
     });
   });
+
+  // ────────────────────────────────────────────────
+  // フォントサイズ: titleFontSize / siteFontSize
+  // ────────────────────────────────────────────────
+  describe("フォントサイズパラメータ", () => {
+    describe("正常系", () => {
+      it("titleFontSize が正の整数の場合はその値を格納する", () => {
+        const result = parseParams(makeParams({ titleFontSize: "72" }), defaults);
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.data.titleFontSize).toBe(72);
+      });
+
+      it("siteFontSize が正の整数の場合はその値を格納する", () => {
+        const result = parseParams(makeParams({ siteFontSize: "24" }), defaults);
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.data.siteFontSize).toBe(24);
+      });
+
+      it("titleFontSize と siteFontSize を同時指定できる", () => {
+        const result = parseParams(
+          makeParams({ titleFontSize: "80", siteFontSize: "20" }),
+          defaults
+        );
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.data.titleFontSize).toBe(80);
+        expect(result.data.siteFontSize).toBe(20);
+      });
+
+      it("titleFontSize 省略時は undefined（未設定）になる", () => {
+        const result = parseParams(makeParams({}), defaults);
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.data.titleFontSize).toBeUndefined();
+      });
+
+      it("siteFontSize 省略時は undefined（未設定）になる", () => {
+        const result = parseParams(makeParams({}), defaults);
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.data.siteFontSize).toBeUndefined();
+      });
+
+      it("titleFontSize が空文字の場合は undefined（未設定）になる", () => {
+        const result = parseParams(makeParams({ titleFontSize: "" }), defaults);
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.data.titleFontSize).toBeUndefined();
+      });
+
+      it("siteFontSize が空文字の場合は undefined（未設定）になる", () => {
+        const result = parseParams(makeParams({ siteFontSize: "" }), defaults);
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.data.siteFontSize).toBeUndefined();
+      });
+    });
+
+    describe("バリデーション", () => {
+      it("titleFontSize が 0 の場合は INVALID_FONT_SIZE エラーを返す", () => {
+        const result = parseParams(makeParams({ titleFontSize: "0" }), defaults);
+        expect(result.ok).toBe(false);
+        if (result.ok) return;
+        expect(result.error.code).toBe("INVALID_FONT_SIZE");
+        expect(result.error.field).toBe("titleFontSize");
+      });
+
+      it("titleFontSize が負数の場合は INVALID_FONT_SIZE エラーを返す", () => {
+        const result = parseParams(makeParams({ titleFontSize: "-10" }), defaults);
+        expect(result.ok).toBe(false);
+        if (result.ok) return;
+        expect(result.error.code).toBe("INVALID_FONT_SIZE");
+        expect(result.error.field).toBe("titleFontSize");
+      });
+
+      it("titleFontSize が小数の場合は INVALID_FONT_SIZE エラーを返す", () => {
+        const result = parseParams(makeParams({ titleFontSize: "12.5" }), defaults);
+        expect(result.ok).toBe(false);
+        if (result.ok) return;
+        expect(result.error.code).toBe("INVALID_FONT_SIZE");
+        expect(result.error.field).toBe("titleFontSize");
+      });
+
+      it("titleFontSize が非数値文字列の場合は INVALID_FONT_SIZE エラーを返す", () => {
+        const result = parseParams(makeParams({ titleFontSize: "abc" }), defaults);
+        expect(result.ok).toBe(false);
+        if (result.ok) return;
+        expect(result.error.code).toBe("INVALID_FONT_SIZE");
+        expect(result.error.field).toBe("titleFontSize");
+      });
+
+      it("siteFontSize が 0 の場合は INVALID_FONT_SIZE エラーを返す", () => {
+        const result = parseParams(makeParams({ siteFontSize: "0" }), defaults);
+        expect(result.ok).toBe(false);
+        if (result.ok) return;
+        expect(result.error.code).toBe("INVALID_FONT_SIZE");
+        expect(result.error.field).toBe("siteFontSize");
+      });
+
+      it("siteFontSize が小数の場合は INVALID_FONT_SIZE エラーを返す", () => {
+        const result = parseParams(makeParams({ siteFontSize: "9.5" }), defaults);
+        expect(result.ok).toBe(false);
+        if (result.ok) return;
+        expect(result.error.code).toBe("INVALID_FONT_SIZE");
+        expect(result.error.field).toBe("siteFontSize");
+      });
+
+      it("INVALID_FONT_SIZE エラーのメッセージに受け取った値が含まれる", () => {
+        const result = parseParams(makeParams({ titleFontSize: "abc" }), defaults);
+        expect(result.ok).toBe(false);
+        if (result.ok) return;
+        expect(result.error.message).toContain("abc");
+      });
+    });
+
+    describe("fail-fast 検証順序", () => {
+      it("titleFontSize と siteFontSize がともに不正な場合は titleFontSize を先に返す", () => {
+        const result = parseParams(
+          makeParams({ titleFontSize: "0", siteFontSize: "-1" }),
+          defaults
+        );
+        expect(result.ok).toBe(false);
+        if (result.ok) return;
+        expect(result.error.field).toBe("titleFontSize");
+      });
+
+      it("既存パラメータ（width）が不正なら titleFontSize より先に width エラーを返す", () => {
+        const result = parseParams(
+          makeParams({ width: "abc", titleFontSize: "0" }),
+          defaults
+        );
+        expect(result.ok).toBe(false);
+        if (result.ok) return;
+        expect(result.error.code).toBe("INVALID_DIMENSION");
+        expect(result.error.field).toBe("width");
+      });
+    });
+  });
 });

@@ -17,12 +17,26 @@ export interface OgParams {
   textWidth: number;
   /** 画像フォーマット。デフォルト: 'png' */
   format: "png" | "svg";
+  /**
+   * タイトルのフォントサイズ（px）。未指定時は undefined。
+   * undefined のときはテンプレート側で既定トークンにスケール・クランプを適用する。
+   */
+  titleFontSize?: number;
+  /**
+   * サイト名ラベルのフォントサイズ（px）。未指定時は undefined。
+   * undefined のときはテンプレート側で既定トークンにスケール・クランプを適用する。
+   */
+  siteFontSize?: number;
 }
 
 /** バリデーションエラー情報 */
 export interface ValidationError {
   /** エラーコード */
-  code: "INVALID_FORMAT" | "INVALID_DIMENSION" | "TITLE_TOO_LONG";
+  code:
+    | "INVALID_FORMAT"
+    | "INVALID_DIMENSION"
+    | "TITLE_TOO_LONG"
+    | "INVALID_FONT_SIZE";
   /** 人間が読めるエラーメッセージ */
   message: string;
   /** エラーが発生したフィールド名 */
@@ -57,6 +71,44 @@ const TITLE_MAX_LENGTH = 200;
  */
 function isPositiveInteger(value: number): boolean {
   return Number.isInteger(value) && value > 0;
+}
+
+/** オプショナルなフォントサイズ解析の結果 */
+type FontSizeParseResult =
+  | { ok: true; value: number | undefined }
+  | { ok: false; error: ValidationError };
+
+/**
+ * オプショナルなフォントサイズパラメータを解析・検証するヘルパー関数
+ *
+ * 省略・空文字は「未設定」として `undefined` を返し、既定値の埋め込みは行わない。
+ * 値が指定された場合は既存の正整数規則（`isPositiveInteger`）で検証し、
+ * 正の整数以外は `INVALID_FONT_SIZE` の構造化エラーを返す。
+ *
+ * @param raw - クエリから取得した生値（未指定なら null）
+ * @param field - エラー時に報告するフィールド名
+ * @returns 解析成功時は value（正の整数または undefined）、失敗時は ValidationError
+ */
+function parseOptionalFontSize(
+  raw: string | null,
+  field: string
+): FontSizeParseResult {
+  if (raw === null || raw === "") {
+    // 省略・空文字は未設定（テンプレート側でスケーリングを適用）
+    return { ok: true, value: undefined };
+  }
+  const value = Number(raw);
+  if (!isPositiveInteger(value)) {
+    return {
+      ok: false,
+      error: {
+        code: "INVALID_FONT_SIZE",
+        message: `${field} は正の整数で指定してください（受け取った値: "${raw}"）`,
+        field,
+      },
+    };
+  }
+  return { ok: true, value };
 }
 
 /**
@@ -171,10 +223,31 @@ export function parseParams(
     };
   }
 
+  // --- titleFontSize の解析 ---
+  // 検証順序は fail-fast のため titleFontSize → siteFontSize の順とする
+  const titleFontSizeResult = parseOptionalFontSize(
+    searchParams.get("titleFontSize"),
+    "titleFontSize"
+  );
+  if (!titleFontSizeResult.ok) {
+    return { ok: false, error: titleFontSizeResult.error };
+  }
+  const titleFontSize = titleFontSizeResult.value;
+
+  // --- siteFontSize の解析 ---
+  const siteFontSizeResult = parseOptionalFontSize(
+    searchParams.get("siteFontSize"),
+    "siteFontSize"
+  );
+  if (!siteFontSizeResult.ok) {
+    return { ok: false, error: siteFontSizeResult.error };
+  }
+  const siteFontSize = siteFontSizeResult.value;
+
   // 全てのバリデーションを通過した場合は OgParams を返す
   // 仕様に定義されていないパラメータ（pattern, fontSize 等）は無視される
   return {
     ok: true,
-    data: { title, width, height, textWidth, format },
+    data: { title, width, height, textWidth, format, titleFontSize, siteFontSize },
   };
 }

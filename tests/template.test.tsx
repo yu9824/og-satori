@@ -97,6 +97,45 @@ describe("_scaleTokens", () => {
   });
 });
 
+describe("_scaleTokens フォントサイズオーバーライド", () => {
+  it("title 指定時はスケール・クランプを適用せず指定値をそのまま使う", () => {
+    // scale=210/630（縮小）でも指定値 72 がそのまま採用される
+    const scale = 210 / 630;
+    const tokens = _scaleTokens(scale, 400, 210, { title: 72 });
+    expect(tokens.titleFontSize).toBe(72);
+  });
+
+  it("label 指定時は 12px クランプを迂回して指定値をそのまま使う", () => {
+    // scale=210/630 では通常 labelFontSize=12（クランプ下限）になるが、10 をそのまま採用
+    const scale = 210 / 630;
+    const tokens = _scaleTokens(scale, 400, 210, { label: 10 });
+    expect(tokens.labelFontSize).toBe(10);
+  });
+
+  it("title のみ指定時、label は従来どおりスケール・クランプされる", () => {
+    const tokens = _scaleTokens(1.0, 1200, 630, { title: 100 });
+    expect(tokens.titleFontSize).toBe(100);
+    // label は未指定なので既定トークン × scale = 28
+    expect(tokens.labelFontSize).toBe(28);
+  });
+
+  it("フォントサイズ以外のトークン（padding 等）はオーバーライドの影響を受けない", () => {
+    const base = _scaleTokens(1.0, 1200, 630);
+    const overridden = _scaleTokens(1.0, 1200, 630, { title: 100, label: 50 });
+    expect(overridden.padding).toBe(base.padding);
+    expect(overridden.accentLineHeight).toBe(base.accentLineHeight);
+    expect(overridden.accentLineWidth).toBe(base.accentLineWidth);
+  });
+
+  it("オーバーライド省略時は従来と同一の ScaledTokens を返す（回帰防止）", () => {
+    const base = _scaleTokens(1.0, 1200, 630);
+    expect(_scaleTokens(1.0, 1200, 630, {})).toEqual(base);
+    expect(
+      _scaleTokens(1.0, 1200, 630, { title: undefined, label: undefined })
+    ).toEqual(base);
+  });
+});
+
 describe("renderTemplate", () => {
   // ────────────────────────────────────────────────
   // スナップショットテスト
@@ -285,6 +324,120 @@ describe("renderTemplate", () => {
       const json = JSON.stringify(element);
       // 空文字のとき、タイトル文字列の先頭文字も含まれないことを確認
       expect(json).not.toContain("何か");
+    });
+  });
+
+  // ────────────────────────────────────────────────
+  // フォントサイズオーバーライド（Req 1.2, 1.3, 2.2, 2.3, 4.1〜4.5）
+  // ────────────────────────────────────────────────
+  describe("フォントサイズオーバーライド", () => {
+    it("titleFontSize 指定時はスケール・クランプ非適用で指定値を描画に使う", () => {
+      const element = renderTemplate({
+        ...baseInput,
+        params: { ...baseInput.params, titleFontSize: 72, width: 800, height: 420, textWidth: 640 },
+      });
+      const json = JSON.stringify(element);
+      // 縮小サイズでもスケールされず 72px がそのまま使われる
+      expect(json).toContain('"fontSize":"72px"');
+    });
+
+    it("siteFontSize 指定時はスケール・クランプ非適用で指定値をラベルに使う", () => {
+      const element = renderTemplate({
+        ...baseInput,
+        params: { ...baseInput.params, siteFontSize: 24, width: 800, height: 420, textWidth: 640 },
+      });
+      const json = JSON.stringify(element);
+      expect(json).toContain('"fontSize":"24px"');
+    });
+
+    it("titleFontSize は siteFontSize に影響しない（独立適用）", () => {
+      const element = renderTemplate({
+        ...baseInput,
+        // titleFontSize のみ指定、siteFontSize は未指定（scale=1.0 で labelFontSize=28）
+        params: { ...baseInput.params, titleFontSize: 90 },
+      });
+      const json = JSON.stringify(element);
+      expect(json).toContain('"fontSize":"90px"'); // タイトル
+      expect(json).toContain('"fontSize":"28px"'); // ラベルは既定トークン
+    });
+
+    it("titleFontSize 指定時、truncateTitle が描画と同一の実効サイズを使う（Req 4.5）", () => {
+      // 30 文字のタイトル。デフォルト 56px なら maxChars=51 で全文、
+      // 200px 指定なら charsPerLine=floor(960/200)=4, maxChars=12 で省略される。
+      const longTitle = "あ".repeat(30);
+      const element = renderTemplate({
+        ...baseInput,
+        params: { ...baseInput.params, title: longTitle, titleFontSize: 200, textWidth: 960, width: 1200 },
+      });
+      const json = JSON.stringify(element);
+      expect(json).toContain('"fontSize":"200px"');
+      // 200px に基づき 11 文字 + … に省略される（56px のままなら 30 文字全文）
+      expect(json).toContain("あ".repeat(11) + "…");
+      expect(json).not.toContain("あ".repeat(12));
+    });
+
+    it("オーバーライド未指定時は既定スケーリング値（56px / 28px）を使う", () => {
+      const element = renderTemplate(baseInput);
+      const json = JSON.stringify(element);
+      expect(json).toContain('"fontSize":"56px"');
+      expect(json).toContain('"fontSize":"28px"');
+    });
+  });
+
+  // ────────────────────────────────────────────────
+  // タイトル省略計算の境界ガード（Task 2.2 / Req 4.5）
+  // ────────────────────────────────────────────────
+  describe("truncateTitle 境界ガード", () => {
+    it("titleFontSize > textWidth でも短いタイトルは全文表示（末尾欠落しない）", () => {
+      // charsPerLine=floor(960/1000)=0 になる境界。クランプがなければ slice(0,-1) で末尾欠落。
+      const element = renderTemplate({
+        ...baseInput,
+        params: { ...baseInput.params, title: "あいう", titleFontSize: 1000, textWidth: 960, width: 1200 },
+      });
+      const json = JSON.stringify(element);
+      // 健全: 全文が保持され、… による省略も末尾欠落も起きない
+      expect(json).toContain("あいう");
+      expect(json).not.toContain("…");
+    });
+
+    it("titleFontSize > textWidth でも長いタイトルはクラッシュせず健全に省略される", () => {
+      const longTitle = "あ".repeat(50);
+      const element = renderTemplate({
+        ...baseInput,
+        params: { ...baseInput.params, title: longTitle, titleFontSize: 2000, textWidth: 960, width: 1200 },
+      });
+      const json = JSON.stringify(element);
+      expect(React.isValidElement(element)).toBe(true);
+      expect(json).toContain("…");
+    });
+  });
+
+  // ────────────────────────────────────────────────
+  // スナップショット（フォントサイズ指定ケース）
+  // ────────────────────────────────────────────────
+  describe("スナップショット（フォントサイズ指定）", () => {
+    it("titleFontSize 指定ケースの JSX 構造を返す", () => {
+      const element = renderTemplate({
+        ...baseInput,
+        params: { ...baseInput.params, titleFontSize: 72 },
+      });
+      expect(element).toMatchSnapshot();
+    });
+
+    it("siteFontSize 指定ケースの JSX 構造を返す", () => {
+      const element = renderTemplate({
+        ...baseInput,
+        params: { ...baseInput.params, siteFontSize: 20 },
+      });
+      expect(element).toMatchSnapshot();
+    });
+
+    it("titleFontSize と siteFontSize の両方指定ケースの JSX 構造を返す", () => {
+      const element = renderTemplate({
+        ...baseInput,
+        params: { ...baseInput.params, titleFontSize: 90, siteFontSize: 18 },
+      });
+      expect(element).toMatchSnapshot();
     });
   });
 });

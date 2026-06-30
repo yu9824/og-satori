@@ -94,27 +94,52 @@ interface ScaledTokens {
 }
 
 /**
+ * フォントサイズのオーバーライド（クエリ指定値）。
+ *
+ * 指定されたフィールドはスケール・最小クランプを適用せず、実効フォントサイズ（絶対 px）として
+ * そのまま採用する。未指定（`undefined`）のフィールドは既存のスケーリング挙動を適用する。
+ *
+ * クエリ語彙との対応: `title` ← `titleFontSize`、`label` ← `siteFontSize`。
+ */
+export interface FontSizeOverrides {
+  /** タイトル指定値（px）。undefined なら `TITLE_FONT_SIZE × scale` + 16px クランプ */
+  title?: number;
+  /** ラベル指定値（px）。undefined なら `LABEL_FONT_SIZE × scale` + 12px クランプ */
+  label?: number;
+}
+
+/**
  * スケール係数と画像サイズを受け取り、クランプ済みデザイントークンを返す純粋関数
  *
  * `_` プレフィックスはテスト専用公開関数であることを示す。
  *
+ * フォントサイズは `fontSizeOverrides` で個別に上書きできる。指定された場合は
+ * スケール・最小クランプを適用せず指定値をそのまま使用し、未指定の場合のみ
+ * 既定トークン（`TITLE_FONT_SIZE` / `LABEL_FONT_SIZE`）にスケール・クランプを適用する。
+ * `padding` やアクセントライン等、フォントサイズ以外のトークンは常にスケーリングする。
+ *
  * @param scale - スケール係数（`_calcScaleFactor` の戻り値）
  * @param width - 画像幅（px）
  * @param height - 画像高さ（px）
+ * @param fontSizeOverrides - フォントサイズの上書き（省略時は全て従来挙動）
  * @returns クランプ済みの `ScaledTokens`
  */
 export function _scaleTokens(
   scale: number,
   width: number,
-  height: number
+  height: number,
+  fontSizeOverrides?: FontSizeOverrides
 ): ScaledTokens {
   return {
     padding: Math.max(
       1,
       Math.min(PADDING * scale, width * 0.25, height * 0.25)
     ),
-    titleFontSize: Math.max(16, TITLE_FONT_SIZE * scale),
-    labelFontSize: Math.max(12, LABEL_FONT_SIZE * scale),
+    // 指定値があればスケール・クランプ非適用、なければ従来式（トークン × scale + 最小クランプ）
+    titleFontSize:
+      fontSizeOverrides?.title ?? Math.max(16, TITLE_FONT_SIZE * scale),
+    labelFontSize:
+      fontSizeOverrides?.label ?? Math.max(12, LABEL_FONT_SIZE * scale),
     accentLineHeight: Math.max(1, ACCENT_LINE_HEIGHT * scale),
     accentLineWidth: Math.max(4, ACCENT_LINE_WIDTH * scale),
   };
@@ -141,12 +166,17 @@ export interface RenderInput {
  */
 export function renderTemplate(input: RenderInput): React.ReactElement {
   const { params, config } = input;
-  const { title, width, height, textWidth } = params;
+  const { title, width, height, textWidth, titleFontSize, siteFontSize } = params;
   const { siteName } = config;
 
   // スケール係数とクランプ済みトークンを算出する
+  // フォントサイズ指定値があればスケール・クランプを迂回して採用する
+  // （クエリ語彙 titleFontSize/siteFontSize → 内部トークン title/label に対応付け）
   const scale = _calcScaleFactor(width, height);
-  const tokens = _scaleTokens(scale, width, height);
+  const tokens = _scaleTokens(scale, width, height, {
+    title: titleFontSize,
+    label: siteFontSize,
+  });
 
   // 中央寄せレイアウト計算（satori が calc() 非対応のため JS で事前計算）
   // effectiveTextWidth: textWidth を width でクランプした実効テキスト幅
@@ -265,7 +295,11 @@ function truncateTitle(title: string, textWidth: number, fontSize: number): stri
   // 1 行あたりの概算文字数（フォントサイズとテキスト幅から計算）
   // fontSize * 0.6 は半角文字の概算幅（全角文字はその 2 倍）
   // ここでは全角文字基準で計算する（日本語タイトルを想定）
-  const charsPerLine = Math.floor(textWidth / fontSize);
+  //
+  // 境界ガード: フォントサイズ上書きで fontSize > textWidth になると
+  // Math.floor(textWidth / fontSize) が 0 となり、maxChars=0 → slice(0, -1) で
+  // 末尾 1 文字を欠落させた異常出力を生む。Math.max(1, …) で最低 1 文字/行を保証する。
+  const charsPerLine = Math.max(1, Math.floor(textWidth / fontSize));
   const maxChars = charsPerLine * 3; // 3 行分
 
   if (title.length <= maxChars) {
