@@ -14,3 +14,10 @@ updates:
     # ラベルを付与する（任意）
     labels:
       - "dependencies"
+    # 更新を無視する依存関係
+    ignore:
+      # TypeScript 7.x はネイティブ(Go)コンパイラへの移行版で、JS 版コンパイラ API
+      # (lib/typescript.js) を同梱しない。Next.js 16.2 の型チェック統合はこの JS API に
+      # 依存するためビルドが失敗する。Next.js が native コンパイラに対応するまで 7.x を除外する。
+      - dependency-name: "typescript"
+        versions: [">=7.0.0"]
