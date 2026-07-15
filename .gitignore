@@ -35,5 +35,6 @@ coverage/
 # npm install 時に生成される WASM バイナリ（prepare スクリプトで public/ にコピーされる）
 public/resvg.wasm
 
-# フォントファイル（スクリプトでダウンロードされるバイナリ）
-public/fonts/*.otf
+# フォント（public/fonts/OGSansJP-*.otf）は意図的にコミットしている。
+# git 管理外にすると Vercel の git 連携デプロイに含まれず実行時に読めなくなるため。
+# scripts/subset-fonts.sh でサブセット生成した約2.3MB の成果物。

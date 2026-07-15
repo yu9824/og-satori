@@ -10,7 +10,11 @@
 # 【サブセット対象文字】
 #   - ひらがな (U+3041–U+3096)
 #   - カタカナ (U+30A1–U+30FA)
-#   - 常用漢字 2136 字
+#   - 漢字: scripts/subset-kanji.txt に列挙した字種
+#     （KANJIDIC の grade 1-10 = 常用漢字 + 人名用漢字 ∪ 新聞頻出漢字、約3100字）
+#     フォントを git にコミットできるサイズ（合計 約2.4MB）に抑えつつ、
+#     人名・地名・ブログで一般的な漢字の豆腐化を避けるための合理的な基準。
+#   - CJK 互換漢字 (U+F900–U+FAFF): 人名の異体字（﨑・德 等）
 #   - ASCII 印字可能文字 (U+0020–U+007E)
 #   - 句読点・記号 (U+3000–U+303F)
 #
@@ -35,6 +39,8 @@ ZIP_URL="https://github.com/notofonts/noto-cjk/releases/download/${NOTO_TAG}/16_
 
 # 出力先ディレクトリ
 OUTPUT_DIR="$(dirname "$0")/../public/fonts"
+# サブセット対象の漢字リスト（1行に対象漢字を列挙したファイル）
+KANJI_FILE="$(dirname "$0")/subset-kanji.txt"
 # 一時ファイルを保存するディレクトリ
 TEMP_DIR="$(mktemp -d)"
 
@@ -56,6 +62,11 @@ fi
 
 if ! command -v unzip &>/dev/null; then
   echo "エラー: unzip がインストールされていません。"
+  exit 1
+fi
+
+if [[ ! -f "$KANJI_FILE" ]]; then
+  echo "エラー: 漢字リストが見つかりません: ${KANJI_FILE}"
   exit 1
 fi
 
@@ -88,8 +99,10 @@ UNICODES=(
   "U+30FC"           # 長音符
   "U+FF01-FF60"      # 全角ASCII・全角記号
   "U+FF61-FF9F"      # 半角カタカナ
-  # 常用漢字 (教育漢字・常用漢字の主要範囲)
-  "U+4E00-9FFF"      # CJK 統合漢字（基本ブロック）
+  # CJK 互換漢字。人名で使われる異体字（﨑・德 等）を含むため範囲ごと収録する
+  # （KANJIDIC 由来の KANJI_FILE には異体字が含まれないため、ここで補う）
+  "U+F900-FAFF"      # CJK 互換漢字
+  # 上記以外の漢字は範囲指定ではなく KANJI_FILE（--text-file）で個別に指定する
 )
 
 # Unicode 範囲をカンマ区切りの文字列に変換する
@@ -120,6 +133,7 @@ subset_font() {
   echo "→ サブセットを生成中: ${output_name}.otf"
   pyftsubset "$input" \
     "--unicodes=${UNICODE_RANGE}" \
+    "--text-file=${KANJI_FILE}" \
     "--output-file=${output_path}" \
     "--layout-features=*" \
     "--desubroutinize"

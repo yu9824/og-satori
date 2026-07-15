@@ -1,6 +1,12 @@
 /**
  * FontLoader: satori 用フォントデータをファイルシステムから読み込み、
  * モジュールスコープでキャッシュするモジュール（Node.js Runtime 用）
+ *
+ * フォント（public/fonts/OGSansJP-*.otf）は git にコミットされているため、
+ * デプロイ成果物に同梱される。実行時に外部へ fetch しないので、
+ * ネットワーク依存もコールドスタート時の追加レイテンシもない。
+ * Vercel の関数バンドルに確実に含めるため、next.config.ts の
+ * outputFileTracingIncludes でフォントを明示的に同梱している。
  */
 
 import { readFile } from "fs/promises";
